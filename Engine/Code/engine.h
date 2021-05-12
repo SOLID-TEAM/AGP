@@ -32,6 +32,36 @@ const u16 indices[] = {
     0, 2, 3
 };
 
+struct VertexBufferAttribute
+{
+    u8 location;
+    u8 componentCount;
+    u8 offset;
+};
+
+struct VertexBufferLayout
+{
+    std::vector<VertexBufferAttribute> attributes;
+    u8 stride;
+};
+
+struct VertexShaderAttribute
+{
+    u8 location;
+    u8 componentCount;
+};
+
+struct VertexShaderLayout
+{
+    std::vector<VertexShaderAttribute> attributes;
+};
+
+struct Vao
+{
+    GLuint handle;
+    GLuint programHandle;
+};
+
 struct Image
 {
     void* pixels;
@@ -51,7 +81,8 @@ struct Program
     GLuint             handle;
     std::string        filepath;
     std::string        programName;
-    u64                lastWriteTimestamp; // What is this for?
+    u64                lastWriteTimestamp;
+    VertexShaderLayout vertexInputLayout;
 };
 
 enum Mode
@@ -85,6 +116,7 @@ struct App
 
     // program indices
     u32 texturedGeometryProgramIdx;
+    u32 texturedMeshProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -118,4 +150,6 @@ void Render(App* app);
 
 //
 void FillOpenGLInfo(App* app);
+void FillInputVertexShaderLayout(Program& program);
+
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* userParam);
