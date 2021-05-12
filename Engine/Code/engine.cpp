@@ -257,6 +257,21 @@ void Update(App* app)
     {
         app->showGlInfo = !app->showGlInfo;
     }
+
+    // shader hot reload check
+    for (u64 i = 0; i < app->programs.size(); ++i)
+    {
+        Program& program = app->programs[i];
+        u64 lastTimestamp = GetFileLastWriteTimestamp(program.filepath.c_str());
+        if (lastTimestamp > program.lastWriteTimestamp)
+        {
+            glDeleteProgram(program.handle);
+            String programSource = ReadTextFile(program.filepath.c_str());
+            const char* programName = program.programName.c_str();
+            program.handle = CreateProgramFromSource(programSource, programName);
+            program.lastWriteTimestamp = lastTimestamp;
+        }
+    }
 }
 
 void Render(App* app)
