@@ -44,6 +44,11 @@ enum Mode
 
 struct App
 {
+    // gl info: stores glinfo in one string to be requested by user input
+    // then shows in one imgui window
+    std::string glinfo;
+    bool showGlInfo = false;
+
     // Loop
     f32  deltaTime;
     bool isRunning;
@@ -93,3 +98,5 @@ void Update(App* app);
 
 void Render(App* app);
 
+//
+void FillOpenGLInfo(App* app);

@@ -188,6 +188,9 @@ void Init(App* app)
     // - textures
 
     app->mode = Mode_TexturedQuad;
+
+    // Fill opengl info once at init
+    FillOpenGLInfo(app);
 }
 
 void Gui(App* app)
@@ -195,11 +198,24 @@ void Gui(App* app)
     ImGui::Begin("Info");
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
     ImGui::End();
+
+    if (app->showGlInfo)
+    {
+        ImGui::Begin("OpenGL info");
+        ImGui::Text(app->glinfo.c_str());
+        ImGui::End();
+    }
 }
 
 void Update(App* app)
 {
     // You can handle app->input keyboard/mouse here
+
+    // show/hide gl info window
+    if (app->input.keys[Key::K_I] == BUTTON_PRESS)
+    {
+        app->showGlInfo = !app->showGlInfo;
+    }
 }
 
 void Render(App* app)
@@ -224,3 +240,21 @@ void Render(App* app)
     }
 }
 
+void FillOpenGLInfo(App* app)
+{
+    std::string* s = &app->glinfo;
+   
+    s->clear();
+    s->append("OpenGL version: "  + std::string((char*)glGetString(GL_VERSION))  + "\n" );
+    s->append("OpenGL renderer: " + std::string((char*)glGetString(GL_RENDERER)) + "\n");
+    s->append("OpenGL vendor: "   + std::string((char*)glGetString(GL_VENDOR))   + "\n");
+    s->append("OpenGL GLSL version: " + std::string((char*)glGetString(GL_SHADING_LANGUAGE_VERSION)) + "\n");
+
+    s->append("OpenGL extensions:\n");
+    GLint n_ext;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n_ext);
+    for (int i = 0; i < n_ext; ++i)
+    {
+        s->append((char*)glGetStringi(GL_EXTENSIONS, GLuint(i)) + std::string("\n"));
+    }
+}
