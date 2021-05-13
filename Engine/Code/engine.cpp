@@ -227,7 +227,7 @@ void Init(App* app)
     //app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 
     //// Texture initialization
-    //app->diceTexIdx = LoadTexture2D(app, "dice.png");
+    app->diceTexIdx = LoadTexture2D(app, "dice.png");
     //app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
@@ -257,6 +257,17 @@ void Init(App* app)
     Model& model = app->models.back();
     model.meshIdx = meshIdx;
     u32 modelIdx = (u32)app->models.size() - 1u;
+
+    // basic material
+    u32 baseMeshMaterialIndex = (u32)app->materials.size();
+    app->materials.push_back(Material{});
+    Material& material = app->materials.back();
+    material.name = "basic_white_mat";
+    material.albedo = vec3(1.0f, 1.0f, 1.0f);
+    //material.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
+    //material.smoothness = 10 / 256.0f;
+    material.albedoTextureIdx = app->diceTexIdx;
+    model.materialIdx.push_back(baseMeshMaterialIndex);
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
@@ -401,11 +412,11 @@ void Render(App* app)
                     GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
                     glBindVertexArray(vao);
 
-                    /*u32 submeshMaterilIdx = model.materialIdx[i];
+                    u32 submeshMaterilIdx = model.materialIdx[i];
                     Material& submeshMaterial = app->materials[submeshMaterilIdx];
 
                     glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle); */
+                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
                     //glUniform1i(app->texturedMeshProgram_uTexture, 0);
 
                     Submesh& submesh = mesh.submeshes[i];
