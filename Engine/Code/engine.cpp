@@ -199,6 +199,20 @@ void Init(App* app)
         glDebugMessageCallback(OnGlError, app);
     }
 
+    // uniform buffers -------------------------------------------
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
+
+    glGenBuffers(1, &app->bufferHandle);
+    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    u32 blockOffset = 0;
+    u32 blockSize = sizeof(glm::mat4) * 2;
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, blockOffset, blockSize);
+    // ------------------------------------------------------------
+
     // Geometry
     //glGenBuffers(1, &app->embeddedVertices);
     //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
@@ -234,7 +248,9 @@ void Init(App* app)
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
     // patrick ------------------------------------------------------
-    app->defaultModelId = LoadModel(app, "Patrick/Patrick.obj");
+    Entity patrick = {};
+    patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
+    app->entities.push_back(patrick);
 
     // load program
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
@@ -358,7 +374,35 @@ void Update(App* app)
             program.lastWriteTimestamp = lastTimestamp;
         }
     }
+
+    // update uniform buffer blocks
+    {
+        glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+        u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+        u32 bufferHead = 0;
+
+        std::vector<Entity>& entities = app->entities;
+
+        for (int i = 0; i < entities.size(); ++i)
+        {
+            bufferHead = Align(bufferHead, app->uniformBlockAlignment);
+            entities[i].localParamsOffset = bufferHead;
+
+            memcpy(bufferData + bufferHead, glm::value_ptr(entities[i].worldMatrix), sizeof(glm::mat4));
+            bufferHead += sizeof(glm::mat4);
+
+            memcpy(bufferData + bufferHead, glm::value_ptr(app->worldViewProjectionMatrix), sizeof(glm::mat4));
+            bufferHead += sizeof(glm::mat4);
+
+            entities[i].localParamsSize = bufferHead - entities[i].localParamsOffset;
+        }
+
+        glUnmapBuffer(GL_UNIFORM_BUFFER);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    }
 }
+
+
 
 void Render(App* app)
 {
@@ -411,9 +455,9 @@ void Render(App* app)
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                for (int i = 0; i < app->models.size(); ++i)
+                for (int i = 0; i < app->entities.size(); ++i)
                 {
-                    Model& model = app->models[app->defaultModelId];
+                    Model& model = app->models[app->entities[i].modelIndex];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
@@ -573,4 +617,9 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     case GL_DEBUG_SEVERITY_LOW: ELOG(" - severity: GL_DEBUG_SEVERITY_LOW"); break;
     }
 
+}
+
+u32 Align(u32 value, u32 alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
 }

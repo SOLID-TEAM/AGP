@@ -7,12 +7,22 @@
 #include "platform.h"
 #include <glad/glad.h>
 
+#define BINDING(b) b
+
 typedef glm::vec2  vec2;
 typedef glm::vec3  vec3;
 typedef glm::vec4  vec4;
 typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
+
+struct Entity
+{
+    glm::mat4 worldMatrix;
+    u32 modelIndex;
+    u32 localParamsOffset;
+    u32 localParamsSize;
+};
 
 struct VertexV3V2
 {
@@ -195,7 +205,17 @@ struct App
     // mesh for textured quad
     Mesh texturedQuadMesh;
 
+    // -----
+    GLint maxUniformBufferSize;
+    GLint uniformBlockAlignment;
+    GLuint bufferHandle;
+
+    glm::mat4 worldMatrix;
+    glm::mat4 worldViewProjectionMatrix;
+
+    std::vector<Entity> entities;
 };
+
 
 void Init(App* app);
 
@@ -207,6 +227,8 @@ void Render(App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
+//
+u32 Align(u32 value, u32 alignment);
 
 //
 void FillOpenGLInfo(App* app);
