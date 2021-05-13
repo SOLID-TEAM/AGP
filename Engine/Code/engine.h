@@ -29,7 +29,7 @@ const VertexV3V2 vertices[] = {
     { glm::vec3(-0.5, 0.5, 0.0), glm::vec2(0.0, 1.0) } // top left vertex
 };
 
-const u16 indices[] = {
+const u32 indices[] = {
     0, 1, 2,
     0, 2, 3
 };
