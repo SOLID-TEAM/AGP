@@ -233,19 +233,76 @@ void Init(App* app)
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
-    // patrick ----------------------
+    // patrick ------------------------------------------------------
     app->defaultModelId = LoadModel(app, "Patrick/Patrick.obj");
-
-    // create the vertex format
-   /* VertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, 3 * sizeof(float) });
-    vertexBufferLayout.stride = 5 * sizeof(float);*/
 
     // load program
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
     FillInputVertexShaderLayout(texturedMeshProgram);
+    // ---------------------------------------------------------------
+
+    // textured quad to new structs ----------------------------------
+    // textured geometry program
+    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+    Program& texturedGeoProgramIdx = app->programs[app->texturedGeometryProgramIdx];
+    FillInputVertexShaderLayout(texturedGeoProgramIdx);
+
+    // meshes etc
+    app->meshes.push_back(Mesh{});
+    Mesh& mesh = app->meshes.back();
+    u32 meshIdx = (u32)app->meshes.size() - 1u;
+
+    app->models.push_back(Model{});
+    Model& model = app->models.back();
+    model.meshIdx = meshIdx;
+    u32 modelIdx = (u32)app->models.size() - 1u;
+
+    // create the vertex format
+    VertexBufferLayout vertexBufferLayout = {};
+    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
+    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, 3 * sizeof(float) });
+    vertexBufferLayout.stride = 5 * sizeof(float);
+
+    // add submesh into mesh
+    std::vector<float> v;
+    std::vector<u32> ind;
+
+    u32 n_vert = ARRAY_COUNT(vertices);
+    for (u32 i = 0; i < n_vert; ++i)
+    {
+        v.push_back(vertices[i].pos.x);
+        v.push_back(vertices[i].pos.y);
+        v.push_back(vertices[i].pos.z);
+
+        v.push_back(vertices[i].uv.x);
+        v.push_back(vertices[i].uv.y);
+    }
+
+    u32 n_indices = ARRAY_COUNT(indices);
+    for (u32 i = 0; i < n_indices; ++i)
+    {
+        ind.push_back(indices[i]);
+    }
+
+    Submesh submesh = {};
+    submesh.vertexBufferLayout = vertexBufferLayout;
+    submesh.vertices.swap(v);
+    submesh.indices.swap(ind);
+    mesh.submeshes.push_back(submesh);
+
+   // Geometry
+   glGenBuffers(1, &mesh.vertexBufferHandle);
+   glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+   glGenBuffers(1, &mesh.indexBufferHandle);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+   // ------------------------------------------------------------------------
 
 }
 
@@ -333,10 +390,10 @@ void Render(App* app)
 
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-                Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
+                Program& texturedMeshProgram = app->programs[app->texturedGeometryProgramIdx/*app->texturedMeshProgramIdx*/];
                 glUseProgram(texturedMeshProgram.handle);
 
-                Model& model = app->models[app->defaultModelId];
+                Model& model = app->models[1/*app->defaultModelId*/];
                 Mesh& mesh = app->meshes[model.meshIdx];
 
                 for (u32 i = 0; i < mesh.submeshes.size(); ++i)
@@ -344,12 +401,12 @@ void Render(App* app)
                     GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
                     glBindVertexArray(vao);
 
-                    u32 submeshMaterilIdx = model.materialIdx[i];
+                    /*u32 submeshMaterilIdx = model.materialIdx[i];
                     Material& submeshMaterial = app->materials[submeshMaterilIdx];
 
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-                    glUniform1i(app->texturedMeshProgram_uTexture, 0);
+                    glUniform1i(app->texturedMeshProgram_uTexture, 0);*/
 
                     Submesh& submesh = mesh.submeshes[i];
                     glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
@@ -386,7 +443,7 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
         // link all vertex inputs attributes to attributes in the vertex buffer
         for (u32 i = 0; i < program.vertexInputLayout.attributes.size(); ++i)
         {
-            bool attributeWasLinked = false; // ?
+            bool attributeWasLinked = false;
             for (u32 j = 0; j < submesh.vertexBufferLayout.attributes.size(); ++j)
             {
                 if (program.vertexInputLayout.attributes[i].location == submesh.vertexBufferLayout.attributes[j].location)
@@ -398,7 +455,7 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
                     glVertexAttribPointer(index, ncomp, GL_FLOAT, GL_FALSE, stride, (void*)(u64)offset);
                     glEnableVertexAttribArray(index);
 
-                    attributeWasLinked = true; // ?
+                    attributeWasLinked = true;
                     break;
                 }
             }

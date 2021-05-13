@@ -192,6 +192,8 @@ struct App
 
     // predefined model id
     u32 defaultModelId = 0;
+    // mesh for textured quad
+    Mesh texturedQuadMesh;
 
 };
 
