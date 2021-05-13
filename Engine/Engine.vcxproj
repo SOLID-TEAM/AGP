@@ -21,7 +21,51 @@
   <ItemGroup>
     <ClCompile Include="Code\assimp_model_loading.cpp" />
     <ClCompile Include="Code\engine.cpp" />
+    <ClCompile Include="Code\generator_model_loading.cpp" />
+    <ClCompile Include="Code\model_loading.cpp" />
     <ClCompile Include="Code\platform.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\AnyMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\AnyPath.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\AnyShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\BoxMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\CappedConeMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\CappedCylinderMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\CappedTubeMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\CapsuleMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\CircleShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\ConeMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\ConvexPolygonMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\CylinderMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\DiskMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\DodecahedronMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\EmptyMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\EmptyPath.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\EmptyShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\GridShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\HelixPath.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\IcosahedronMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\IcoSphereMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\KnotPath.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\LinePath.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\LineShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\ObjWriter.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\ParametricMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\ParametricPath.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\ParametricShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\PlaneMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\RectangleShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\RoundedBoxMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\RoundedRectangleShape.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\SphereMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\SphericalConeMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\SphericalTriangleMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\SpringMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\SvgWriter.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\TeapotMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\TorusKnotMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\TorusMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\TriangleMesh.cpp" />
+    <ClCompile Include="ThirdParty\generator\src\TubeMesh.cpp" />
     <ClCompile Include="ThirdParty\glad\include\glad\glad.c" />
     <ClCompile Include="ThirdParty\imgui-docking\imgui.cpp" />
     <ClCompile Include="ThirdParty\imgui-docking\imgui_demo.cpp" />
@@ -35,7 +79,99 @@
   <ItemGroup>
     <ClInclude Include="Code\assimp_model_loading.h" />
     <ClInclude Include="Code\engine.h" />
+    <ClInclude Include="Code\generator_model_loading.h" />
+    <ClInclude Include="Code\model_loading.h" />
     <ClInclude Include="Code\platform.h" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AnyGenerator.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AnyMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AnyPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AnyShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\Axis.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AxisFlipMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AxisSwapMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AxisSwapPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\AxisSwapShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\BezierMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\BezierShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\BoxMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\CappedConeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\CappedCylinderMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\CappedTubeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\CapsuleMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\CircleShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ConeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ConvexPolygonMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\CylinderMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\DiskMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\DodecahedronMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\Edge.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\EmptyMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\EmptyPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\EmptyShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ExtrudeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\FlipMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\FlipPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\FlipShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\generator.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\GridShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\HelixPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\IcosahedronMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\IcoSphereMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\Iterator.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\KnotPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\LatheMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\LinePath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\LineShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\math.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\MergeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\MergePath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\MergeShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\MeshVertex.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\MirrorMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ObjWriter.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ParametricMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ParametricPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ParametricShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\PathVertex.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\PlaneMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RectangleShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RepeatMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RepeatPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RepeatShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RotateMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RotatePath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RotateShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RoundedBoxMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\RoundedRectangleShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ScaleMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ScalePath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ScaleShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ShapeToPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\ShapeVertex.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SphereMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SphericalConeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SphericalTriangleMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SpherifyMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SpringMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SubdivideMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SubdividePath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SubdivideShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\SvgWriter.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TeapotMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TorusKnotMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TorusMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TransformMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TransformPath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TransformShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TranslateMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TranslatePath.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TranslateShape.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\Triangle.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TriangleMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\TubeMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\utils.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\UvFlipMesh.hpp" />
+    <ClInclude Include="ThirdParty\generator\include\generator\UvSwapMesh.hpp" />
     <ClInclude Include="ThirdParty\glad\include\glad\glad.h" />
     <ClInclude Include="ThirdParty\glad\include\glad\khrplatform.h" />
     <ClInclude Include="ThirdParty\imgui-docking\imconfig.h" />
@@ -149,7 +285,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>ThirdParty\glfw\include;ThirdParty\glad\include;ThirdParty\glm\include;ThirdParty\imgui-docking;ThirdParty\stb;ThirdParty\Assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>ThirdParty\glfw\include;ThirdParty\glad\include;ThirdParty\glm\include;ThirdParty\imgui-docking;ThirdParty\stb;ThirdParty\Assimp\include;ThirdParty\Generator\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -166,7 +302,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>ThirdParty\glfw\include;ThirdParty\glad\include;ThirdParty\glm\include;ThirdParty\imgui-docking;ThirdParty\stb;ThirdParty\Assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>ThirdParty\glfw\include;ThirdParty\glad\include;ThirdParty\glm\include;ThirdParty\imgui-docking;ThirdParty\stb;ThirdParty\Assimp\include;ThirdParty\Generator\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

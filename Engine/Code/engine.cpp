@@ -236,6 +236,7 @@ void Init(App* app)
     // patrick ------------------------------------------------------
     app->defaultModelId = LoadModel(app, "Patrick/Patrick.obj");
 
+
     // load program
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
