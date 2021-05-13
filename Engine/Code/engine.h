@@ -185,7 +185,7 @@ struct App
     // Location of the texture uniform in the textured quad shader
     GLuint programUniformTexture;
     // default texture uniform for default model
-    //GLuint texturedMeshProgram_uTexture;
+    GLuint texturedMeshProgram_uTexture;
         
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;

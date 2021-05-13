@@ -244,7 +244,7 @@ void Init(App* app)
 
     // textured quad to new structs ----------------------------------
     // textured geometry program
-    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+    /*app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
     Program& texturedGeoProgram = app->programs[app->texturedGeometryProgramIdx];
     FillInputVertexShaderLayout(texturedGeoProgram);
 
@@ -314,7 +314,7 @@ void Init(App* app)
    glGenBuffers(1, &mesh.indexBufferHandle);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); */
 
    // ------------------------------------------------------------------------
 
@@ -407,12 +407,13 @@ void Render(App* app)
                 Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
                 glUseProgram(texturedMeshProgram.handle);
 
+                glEnable(GL_DEPTH_TEST);
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
                 for (int i = 0; i < app->models.size(); ++i)
                 {
-                    Model& model = app->models[i];
+                    Model& model = app->models[app->defaultModelId];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
