@@ -20,6 +20,8 @@ struct VertexV3V2
     glm::vec2 uv;
 };
 
+// Hardcoded plane model with uv coords and indices -----
+
 const VertexV3V2 vertices[] = {
     { glm::vec3(-0.5, -0.5, 0.0), glm::vec2(0.0, 0.0)}, // bottom left vertex
     { glm::vec3(0.5, -0.5, 0.0), glm::vec2(1.0, 0.0) }, // bottom right vertex
@@ -31,6 +33,10 @@ const u16 indices[] = {
     0, 1, 2,
     0, 2, 3
 };
+
+// -------------------------------------------------------
+// -------------------------------------------------------
+// VBO, EBO, SHADER, VAO STUFF ---------------------------
 
 struct VertexBufferAttribute
 {
@@ -60,6 +66,46 @@ struct Vao
 {
     GLuint handle;
     GLuint programHandle;
+};
+
+// --------------------------------------------------
+// MODELS, MESHES, MATERIALS -----------------------------
+
+struct Model
+{
+    u32              meshIdx;
+    std::vector<u32> materialIdx;
+};
+
+struct Submesh
+{
+    VertexBufferLayout vertexBufferLayout;
+    std::vector<float> vertices;
+    std::vector<u32>   indices;
+    u32                vertexOffset;
+    u32                indexOffset;
+
+    std::vector<Vao> vaos;
+};
+
+struct Mesh
+{
+    std::vector<Submesh> submeshes;
+    GLuint               vertexBufferHandle;
+    GLuint               indexBufferHandle;
+};
+
+struct Material
+{
+    std::string name;
+    vec3        albedo;
+    vec3        emissive;
+    f32         smoothness;
+    u32         albedoTextureIdx;
+    u32         emissiveTextureIdx;
+    u32         specularTextureIdx;
+    u32         normalsTextureIdx;
+    u32         bumpTextureIdx;
 };
 
 struct Image
@@ -112,6 +158,9 @@ struct App
     ivec2 displaySize;
 
     std::vector<Texture>  textures;
+    std::vector<Material> materials;
+    std::vector<Mesh>     meshes;
+    std::vector<Model>    models;
     std::vector<Program>  programs;
 
     // program indices
@@ -135,9 +184,15 @@ struct App
 
     // Location of the texture uniform in the textured quad shader
     GLuint programUniformTexture;
-
+    // default texture uniform for default model
+    GLuint texturedMeshProgram_uTexture;
+        
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;
+
+    // predefined model id
+    u32 defaultModelId = 0;
+
 };
 
 void Init(App* app);
@@ -149,7 +204,11 @@ void Update(App* app);
 void Render(App* app);
 
 //
+u32 LoadTexture2D(App* app, const char* filepath);
+
+//
 void FillOpenGLInfo(App* app);
 void FillInputVertexShaderLayout(Program& program);
+GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program);
 
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* userParam);
