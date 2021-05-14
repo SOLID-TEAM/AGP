@@ -10,6 +10,7 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include "assimp_model_loading.h"
+#include "buffer_management.h"
 
 using namespace glm;
 
@@ -22,7 +23,7 @@ GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 
     char versionString[] = "#version 430\n";
     char shaderNameDefine[128];
-    sprintf(shaderNameDefine, "#define %s\n", shaderName);
+    sprintf_s(shaderNameDefine, "#define %s\n", shaderName);
     char vertexShaderDefine[] = "#define VERTEX\n";
     char fragmentShaderDefine[] = "#define FRAGMENT\n";
 
@@ -641,12 +642,6 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     case GL_DEBUG_SEVERITY_MEDIUM: ELOG(" - severity: GL_DEBUG_SEVERITY_MEDIUM"); break;
     case GL_DEBUG_SEVERITY_LOW: ELOG(" - severity: GL_DEBUG_SEVERITY_LOW"); break;
     }
-
-}
-
-u32 Align(u32 value, u32 alignment)
-{
-    return (value + alignment - 1) & ~(alignment - 1);
 }
 
 void UpdateProjectionView(App* app)

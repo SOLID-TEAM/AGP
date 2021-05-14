@@ -18,6 +18,15 @@ typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
 
+
+struct Light
+{
+    vec3         color;
+    vec3         direction;
+    vec3         position;
+    unsigned int type;
+};
+
 struct Entity
 {
     mat4 worldMatrix;
@@ -239,8 +248,6 @@ void Render(App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
-//
-u32 Align(u32 value, u32 alignment);
 //
 void UpdateProjectionView(App* app);
 mat4 TransformScale(const vec3& scaleFactors);
