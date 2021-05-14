@@ -9,6 +9,8 @@
 
 #define BINDING(b) b
 
+using namespace glm;
+
 typedef glm::vec2  vec2;
 typedef glm::vec3  vec3;
 typedef glm::vec4  vec4;
@@ -18,10 +20,16 @@ typedef glm::ivec4 ivec4;
 
 struct Entity
 {
-    glm::mat4 worldMatrix;
+    mat4 worldMatrix;
     u32 modelIndex;
     u32 localParamsOffset;
     u32 localParamsSize;
+};
+
+struct Camera
+{
+    vec3 position;
+    vec3 target;
 };
 
 struct VertexV3V2
@@ -210,10 +218,14 @@ struct App
     GLint uniformBlockAlignment;
     GLuint bufferHandle;
 
-    glm::mat4 worldMatrix;
-    glm::mat4 worldViewProjectionMatrix;
+    //glm::mat4 worldMatrix;
+    //glm::mat4 worldViewProjectionMatrix;
+    mat4 view;
+    mat4 projection;
 
     std::vector<Entity> entities;
+
+    Camera camera;
 };
 
 
@@ -229,7 +241,10 @@ void Render(App* app);
 u32 LoadTexture2D(App* app, const char* filepath);
 //
 u32 Align(u32 value, u32 alignment);
-
+//
+void UpdateProjectionView(App* app);
+mat4 TransformScale(const vec3& scaleFactors);
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors);
 //
 void FillOpenGLInfo(App* app);
 void FillInputVertexShaderLayout(Program& program);

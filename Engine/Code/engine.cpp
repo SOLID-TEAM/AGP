@@ -11,6 +11,8 @@
 #include <stb_image_write.h>
 #include "assimp_model_loading.h"
 
+using namespace glm;
+
 GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
@@ -213,6 +215,10 @@ void Init(App* app)
     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, blockOffset, blockSize);
     // ------------------------------------------------------------
 
+    // camera
+    app->camera.position = {5.0, 5.0, 10.0};
+    app->camera.target = { 0.0, 0.0, 0.0 };
+
     // Geometry
     //glGenBuffers(1, &app->embeddedVertices);
     //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
@@ -375,6 +381,8 @@ void Update(App* app)
         }
     }
 
+    // update projection and view mat
+    UpdateProjectionView(app);
     // update uniform buffer blocks
     {
         glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
@@ -385,13 +393,19 @@ void Update(App* app)
 
         for (int i = 0; i < entities.size(); ++i)
         {
+            // update entity transforms ------
+            entities[i].worldMatrix = TransformPositionScale( vec3(0.0f, 0.0f, 0.0f), vec3(1.0f));
+            mat4 worldViewProjection = app->projection * app->view * entities[i].worldMatrix;
+
+            // -------------------------------
+
             bufferHead = Align(bufferHead, app->uniformBlockAlignment);
             entities[i].localParamsOffset = bufferHead;
 
             memcpy(bufferData + bufferHead, glm::value_ptr(entities[i].worldMatrix), sizeof(glm::mat4));
             bufferHead += sizeof(glm::mat4);
 
-            memcpy(bufferData + bufferHead, glm::value_ptr(app->worldViewProjectionMatrix), sizeof(glm::mat4));
+            memcpy(bufferData + bufferHead, glm::value_ptr(worldViewProjection), sizeof(glm::mat4));
             bufferHead += sizeof(glm::mat4);
 
             entities[i].localParamsSize = bufferHead - entities[i].localParamsOffset;
@@ -622,4 +636,26 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
 u32 Align(u32 value, u32 alignment)
 {
     return (value + alignment - 1) & ~(alignment - 1);
+}
+
+void UpdateProjectionView(App* app)
+{
+    float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+    float znear = 0.1f;
+    float zfar = 1000.0f;
+    app->projection = perspective(radians(60.0f), aspectRatio, znear, zfar);
+    app->view = lookAt(app->camera.position, app->camera.target, { 0, 1, 0 });
+}
+
+mat4 TransformScale(const vec3& scaleFactors)
+{
+    mat4 transform = scale(scaleFactors);
+    return transform;
+}
+
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
+{
+    mat4 transform = translate(pos);
+    transform = scale(transform, scaleFactors);
+    return transform;
 }
