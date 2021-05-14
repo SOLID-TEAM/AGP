@@ -37,6 +37,14 @@ void main()
 
 #ifdef SIMPLE_PATRICK
 
+struct Light
+{
+	unsigned int type;
+	vec3		 color;
+	vec3		 direction;
+	vec3		 position;
+};
+
 #if defined(VERTEX) ///////////////////////////////////////////////////
 
 layout(location = 0) in vec3 aPosition;
@@ -45,12 +53,12 @@ layout(location = 2) in vec2 aTexCoord;
 //layout(location = 3) in vec3 aTangent;
 //layout(location = 4) in vec3 aBitangent;
 
-/*layout(binding = 0, std140) uniform GlobalParams
+layout(binding = 0, std140) uniform GlobalParams
 {
 	vec3 uCameraPosition;
 	unsigned int uLightCount;
 	Light uLight[16];
-};*/
+};
 
 layout(binding = 1, std140) uniform LocalParams
 {
@@ -59,16 +67,16 @@ layout(binding = 1, std140) uniform LocalParams
 };
 
 out vec2 vTexCoord;
-out vec3 vPosition;
-out vec3 vNormal;
-//out vec3 vViewDir;
+out vec3 vPosition; // in worldspace
+out vec3 vNormal;   // in worldspace
+out vec3 vViewDir;  // in worldspace
 
 void main()
 {
 	vTexCoord = aTexCoord;
 	vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
 	vNormal = vec3(uWorldMatrix * vec4(aNormal, 0.0));
-	
+	vViewDir = uCameraPosition - vPosition;
 	gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
 }
 
@@ -77,16 +85,27 @@ void main()
 in vec2 vTexCoord;
 in vec3 vPosition;
 in vec3 vNormal;
-//in vec3 vViewDir;
+in vec3 vViewDir;
 
 uniform sampler2D uTexture;
 
 layout(location = 0) out vec4 oColor;
 
+layout(binding = 0, std140) uniform GlobalParams
+{
+	vec3 uCameraPosition;
+	unsigned int uLightCount;
+	Light uLight[16];
+};
+
 void main()
 {
+	for(int i = 0; i < uLightCount; ++i)
+	{
+	// TODO: sum all lights contributions
+	}
 	//oColor = texture(uTexture, vTexCoord);
-	oColor = vec4(vNormal, 1.0);
+	oColor = vec4(normalize(vNormal), 1.0);
 	//oColor = vec4(vPosition, 1.0);
 }
 

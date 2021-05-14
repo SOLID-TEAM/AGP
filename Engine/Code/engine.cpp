@@ -393,12 +393,34 @@ void Update(App* app)
 
     // update projection and view mat
     UpdateProjectionView(app);
-    // update uniform buffer blocks
+    // update uniform global params buffer block
     {
-       /* glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
-        u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-        u32 bufferHead = 0;*/
+        app->globalParamsOffset = app->cbuffer.head;
 
+        BindBuffer(app->cbuffer);
+        MapBuffer(app->cbuffer, GL_WRITE_ONLY);
+
+        PushVec3(app->cbuffer, app->camera.position);
+        PushUInt(app->cbuffer, app->lights.size());
+
+        for (u32 i = 0; i < app->lights.size(); ++i)
+        {
+            AlignHead(app->cbuffer, sizeof(vec4));
+
+            Light& l = app->lights[i];
+            PushUInt(app->cbuffer, l.type);
+            PushVec3(app->cbuffer, l.color);
+            PushVec3(app->cbuffer, l.direction);
+            PushVec3(app->cbuffer, l.position);
+        }
+
+        UnmapBuffer(app->cbuffer);
+
+        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
+    }
+
+    // update uniform local params buffer block
+    {
         BindBuffer(app->cbuffer);
         MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
@@ -411,27 +433,16 @@ void Update(App* app)
             mat4 worldViewProjection = app->projection * app->view * e.worldMatrix;
 
             // -------------------------------
-             /*bufferHead = Align(bufferHead, app->uniformBlockAlignment);
-            entities[i].localParamsOffset = bufferHead;*/
             AlignHead(app->cbuffer, app->uniformBlockAlignment);
             e.localParamsOffset = app->cbuffer.head;
            
             PushMat4(app->cbuffer, e.worldMatrix);
             PushMat4(app->cbuffer, worldViewProjection);
 
-            /*memcpy(bufferData + bufferHead, glm::value_ptr(e.worldMatrix), sizeof(glm::mat4));
-            bufferHead += sizeof(glm::mat4);
-
-            memcpy(bufferData + bufferHead, glm::value_ptr(worldViewProjection), sizeof(glm::mat4));
-            bufferHead += sizeof(glm::mat4);*/
-
             e.localParamsSize = app->cbuffer.head - e.localParamsOffset;
         }
 
         UnmapBuffer(app->cbuffer);
-
-       /* glUnmapBuffer(GL_UNIFORM_BUFFER);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);*/
     }
 }
 
@@ -487,6 +498,8 @@ void Render(App* app)
                 glEnable(GL_DEPTH_TEST);
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
                 for (int idx = 0; idx < app->entities.size(); ++idx)
                 {
