@@ -1,122 +1,108 @@
 #include "model_loading.h"
 #include "generator_model_loading.h"
-#include <generator/SphereMesh.hpp>
-#include <generator/BoxMesh.hpp>
-#include <generator/PlaneMesh.hpp>
 
+#define PAR_SHAPES_IMPLEMENTATION
+#include "par_shapes.h"
 
-DefaultModel::DefaultModel(App* app)
+u32 LoadDefaultModel(DefaultModelType type, App* app)
 {
+
 	app->meshes.push_back(Mesh{});
-	mesh = &app->meshes.back();
-	meshIdx = (u32)app->meshes.size() - 1u;
+	Mesh& mesh = app->meshes.back();
+	u32 meshIdx = (u32)app->meshes.size() - 1u;
 
 	app->models.push_back(Model{});
-	model = &app->models.back();
-	model->meshIdx = meshIdx;
-	modelIdx = (u32)app->models.size() - 1u;
+	Model& model = app->models.back();
+	model.meshIdx = meshIdx;
+	u32 modelIdx = (u32)app->models.size() - 1u;
 
-	model->materialIdx.push_back(0u);
-}
+	model.materialIdx.push_back(app->defaultMaterialId);
 
+	par_shapes_mesh* parMesh = GenerateDefaultModelData(type);
+	par_shapes_compute_normals(parMesh);
 
-DefaultModel LoadSphereModel(App* app)
-{
-	DefaultModel modelToload(app);
-	SphereMesh sphere{};
+	std::vector<float> vertices;
+	std::vector<u32> indices;
 
-	for (const generator::MeshVertex& vertex : sphere.vertices()) {
-		modelToload.vertices.push_back(vertex);
-	}
-	for (const generator::Triangle& triangle : sphere.triangles()) {
-		modelToload.triangles.push_back(triangle);
-	}
-	return modelToload;
-}
-
-DefaultModel LoadBoxModel(App* app)
-{
-	DefaultModel modelToload(app);
-	BoxMesh box{};
-
-	for (const generator::MeshVertex& vertex : box.vertices()) {
-		modelToload.vertices.push_back(vertex);
-	}
-	for (const generator::Triangle& triangle : box.triangles()) {
-		modelToload.triangles.push_back(triangle);
-	}
-	return modelToload;
-}
-
-DefaultModel LoadPlaneModel(App* app)
-{
-	DefaultModel modelToload(app);
-	PlaneMesh plane{};
-
-	for (const generator::MeshVertex& vertex : plane.vertices()) {
-		modelToload.vertices.push_back(vertex);
-	}
-	for (const generator::Triangle& triangle : plane.triangles()) {
-		modelToload.triangles.push_back(triangle);
-	}
-	return modelToload;
-}
-
-
-void LoadGeneratorModels(App* app)
-{
-	std::list<DefaultModel> modelsToLoad
+	for (int i = 0; i < parMesh->npoints; ++i)
 	{
-		LoadSphereModel(app),
-		LoadBoxModel(app),
-		LoadPlaneModel(app)
-	};
+		int pointOffset = i * 3;
 
-	for (const DefaultModel& defaultModel : modelsToLoad)
-	{
-		std::vector<float> vertices;
-		std::vector<u32> indices;
+		// Process vertices
+		vertices.push_back(parMesh->points[pointOffset]);
+		vertices.push_back(parMesh->points[pointOffset + 1]);
+		vertices.push_back(parMesh->points[pointOffset + 2]);
 
-		for (const generator::MeshVertex& vertex : defaultModel.vertices)
+
+		vertices.push_back(parMesh->normals[pointOffset]);
+		vertices.push_back(parMesh->normals[pointOffset + 1]);
+		vertices.push_back(parMesh->normals[pointOffset + 2]);
+
+		if (!parMesh->tcoords)
 		{
-			// Process vertices
-			vertices.push_back(vertex.position.x);
-			vertices.push_back(vertex.position.y);
-			vertices.push_back(vertex.position.z);
-
-			vertices.push_back(vertex.normal.x);
-			vertices.push_back(vertex.normal.y);
-			vertices.push_back(vertex.normal.z);
-
-			vertices.push_back(vertex.texCoord.x);
-			vertices.push_back(vertex.texCoord.y);
+			vertices.push_back(parMesh->normals[pointOffset]);
+			vertices.push_back(parMesh->normals[pointOffset + 1]);
+		}
+		else
+		{
+			vertices.push_back(parMesh->tcoords[i * 2]);
+			vertices.push_back(parMesh->tcoords[i * 2 + 1]);
 		}
 
-		// Process indices 
-		for (const generator::Triangle& triangle : defaultModel.triangles)
-		{
-			indices.push_back(triangle.vertices.x);
-			indices.push_back(triangle.vertices.y);
-			indices.push_back(triangle.vertices.z);
-		}
+	}									 
 
-		// Create the vertex format
-		VertexBufferLayout vertexBufferLayout = {};
-		vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-		vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 3, 3 * sizeof(float) });
-		vertexBufferLayout.stride = 6 * sizeof(float);
+	// Process indices 
+	for (int i = 0; i < parMesh->ntriangles; ++i)
+	{
+		int pointOffset = i * 3;
 
-		vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride });
-		vertexBufferLayout.stride += 2 * sizeof(float);
-
-		// Add the submesh into the mesh
-		Submesh submesh = {};
-		submesh.vertexBufferLayout = vertexBufferLayout;
-		submesh.vertices.swap(vertices);
-		submesh.indices.swap(indices);
-		defaultModel.mesh->submeshes.push_back(submesh);
-
-		LoadMeshGlBuffers(*defaultModel.mesh);
+		indices.push_back(parMesh->triangles[pointOffset]);
+		indices.push_back(parMesh->triangles[pointOffset + 1]);
+		indices.push_back(parMesh->triangles[pointOffset + 2]);
 	}
+
+	// Create the vertex format
+	VertexBufferLayout vertexBufferLayout = {};
+	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
+	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 3, 3 * sizeof(float) });
+	vertexBufferLayout.stride = 6 * sizeof(float);
+
+	vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, vertexBufferLayout.stride });
+	vertexBufferLayout.stride += 2 * sizeof(float);
+
+	// Add the submesh into the mesh
+	Submesh submesh = {};
+	submesh.vertexBufferLayout = vertexBufferLayout;
+	submesh.vertices.swap(vertices);
+	submesh.indices.swap(indices);
+	mesh.submeshes.push_back(submesh);
+
+	LoadMeshGlBuffers(mesh);
+	par_shapes_free_mesh(parMesh);
+
+	return modelIdx;
 }
 
+
+par_shapes_mesh* GenerateDefaultModelData(DefaultModelType type)
+{
+	par_shapes_mesh* mesh = nullptr;
+
+	switch (type)
+	{
+	case DefaultModelType::Sphere: {
+		mesh = par_shapes_create_parametric_sphere(20, 20);
+		break; }
+	case DefaultModelType::Cube: {
+		mesh = par_shapes_create_cube();
+		break; }
+	case DefaultModelType::Plane: {
+		mesh = par_shapes_create_plane(1, 1);
+		break; }
+
+	default:
+		break;
+	}
+
+	return mesh;
+}

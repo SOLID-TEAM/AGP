@@ -137,6 +137,14 @@ enum Mode
     Mode_Count
 };
 
+enum class DefaultModelType : int
+{
+    Sphere = 0,
+    Cube,
+    Plane,
+    Max,
+};
+
 struct App
 {
     // gl info: stores glinfo in one string to be requested by user input
@@ -190,8 +198,12 @@ struct App
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;
 
-    // predefined model id
+    // Default definitions
+
     u32 defaultModelId = 0;
+    u32 defaultModelsId[(int)DefaultModelType::Max];
+    u32 defaultMaterialId;
+
     // mesh for textured quad
     Mesh texturedQuadMesh;
 

@@ -10,6 +10,7 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include "assimp_model_loading.h"
+#include "generator_model_loading.h"
 
 GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 {
@@ -228,7 +229,7 @@ void Init(App* app)
 
     //// Texture initialization
     app->diceTexIdx = LoadTexture2D(app, "dice.png");
-    //app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
+    app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
@@ -319,6 +320,24 @@ void Init(App* app)
 
    // ------------------------------------------------------------------------
 
+   // Load Default Material 
+
+   app->defaultMaterialId = (u32)app->materials.size();
+   app->materials.push_back(Material{});
+
+   Material& defaultMaterial = app->materials.back();
+   defaultMaterial.name = "defaultMaterial";
+   defaultMaterial.albedo = vec3(1.0f, 1.0f, 1.0f);
+   defaultMaterial.albedoTextureIdx = app->whiteTexIdx;
+
+   // Load Default Models
+
+   //LoadDefaultModel(DefaultModelType::Sphere, app);
+
+   for (int i = 0; i < (int)DefaultModelType::Max; ++i)
+   {
+       app->defaultModelsId[i] = LoadDefaultModel( (DefaultModelType)i, app);
+   }
 }
 
 void Gui(App* app)
