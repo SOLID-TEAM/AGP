@@ -7,12 +7,30 @@
 #include "platform.h"
 #include <glad/glad.h>
 
+#define BINDING(b) b
+
+using namespace glm;
+
 typedef glm::vec2  vec2;
 typedef glm::vec3  vec3;
 typedef glm::vec4  vec4;
 typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
+
+struct Entity
+{
+    mat4 worldMatrix;
+    u32 modelIndex;
+    u32 localParamsOffset;
+    u32 localParamsSize;
+};
+
+struct Camera
+{
+    vec3 position;
+    vec3 target;
+};
 
 struct VertexV3V2
 {
@@ -193,7 +211,7 @@ struct App
     // Location of the texture uniform in the textured quad shader
     GLuint programUniformTexture;
     // default texture uniform for default model
-    //GLuint texturedMeshProgram_uTexture;
+    GLuint texturedMeshProgram_uTexture;
         
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;
@@ -207,7 +225,21 @@ struct App
     // mesh for textured quad
     Mesh texturedQuadMesh;
 
+    // -----
+    GLint maxUniformBufferSize;
+    GLint uniformBlockAlignment;
+    GLuint bufferHandle;
+
+    //glm::mat4 worldMatrix;
+    //glm::mat4 worldViewProjectionMatrix;
+    mat4 view;
+    mat4 projection;
+
+    std::vector<Entity> entities;
+
+    Camera camera;
 };
+
 
 void Init(App* app);
 
@@ -219,7 +251,12 @@ void Render(App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
-
+//
+u32 Align(u32 value, u32 alignment);
+//
+void UpdateProjectionView(App* app);
+mat4 TransformScale(const vec3& scaleFactors);
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors);
 //
 void FillOpenGLInfo(App* app);
 void FillInputVertexShaderLayout(Program& program);

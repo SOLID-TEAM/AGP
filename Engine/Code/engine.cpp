@@ -12,6 +12,8 @@
 #include "assimp_model_loading.h"
 #include "generator_model_loading.h"
 
+using namespace glm;
+
 GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 {
     GLchar  infoLogBuffer[1024] = {};
@@ -200,6 +202,24 @@ void Init(App* app)
         glDebugMessageCallback(OnGlError, app);
     }
 
+    // uniform buffers -------------------------------------------
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
+
+    glGenBuffers(1, &app->bufferHandle);
+    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    /*u32 blockOffset = 0;
+    u32 blockSize = sizeof(glm::mat4) * 2;
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, Align(blockSize, app->uniformBlockAlignment), blockSize);*/
+    // ------------------------------------------------------------
+
+    // camera
+    app->camera.position = {5.0, 5.0, 10.0};
+    app->camera.target = { 0.0, 0.0, 0.0 };
+
     // Geometry
     //glGenBuffers(1, &app->embeddedVertices);
     //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
@@ -234,19 +254,29 @@ void Init(App* app)
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
-    // patrick ------------------------------------------------------
-    app->defaultModelId = LoadModel(app, "Patrick/Patrick.obj");
+    // load program -------------------------------------------------
 
-
-    // load program
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
     FillInputVertexShaderLayout(texturedMeshProgram);
+
+    // patrick ------------------------------------------------------
+    vec3 patrickPositions[] = { {  0.0, 0.0, 0.0 }, 
+                                {  6.0, 0.0, 0.0 },
+                                { -6.0, 0.0, 0.0 } };
+    Entity patrick = {};
+    patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
+    for (int i = 0; i < ARRAY_COUNT(patrickPositions); ++i)
+    {
+        patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
+        app->entities.push_back(patrick);
+    }
+    
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
     // textured geometry program
-    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+    /*app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
     Program& texturedGeoProgram = app->programs[app->texturedGeometryProgramIdx];
     FillInputVertexShaderLayout(texturedGeoProgram);
 
@@ -316,7 +346,7 @@ void Init(App* app)
    glGenBuffers(1, &mesh.indexBufferHandle);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); */
 
    // ------------------------------------------------------------------------
 
@@ -378,7 +408,43 @@ void Update(App* app)
             program.lastWriteTimestamp = lastTimestamp;
         }
     }
+
+    // update projection and view mat
+    UpdateProjectionView(app);
+    // update uniform buffer blocks
+    {
+        glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+        u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+        u32 bufferHead = 0;
+
+        std::vector<Entity>& entities = app->entities;
+
+        for (int i = 0; i < entities.size(); ++i)
+        {
+            // update entity transforms ------
+            //entities[i].worldMatrix = TransformPositionScale( vec3(0.0f, 0.0f, 0.0f), vec3(1.0f));
+            mat4 worldViewProjection = app->projection * app->view * entities[i].worldMatrix;
+
+            // -------------------------------
+
+            bufferHead = Align(bufferHead, app->uniformBlockAlignment);
+            entities[i].localParamsOffset = bufferHead;
+
+            memcpy(bufferData + bufferHead, glm::value_ptr(entities[i].worldMatrix), sizeof(glm::mat4));
+            bufferHead += sizeof(glm::mat4);
+
+            memcpy(bufferData + bufferHead, glm::value_ptr(worldViewProjection), sizeof(glm::mat4));
+            bufferHead += sizeof(glm::mat4);
+
+            entities[i].localParamsSize = bufferHead - entities[i].localParamsOffset;
+        }
+
+        glUnmapBuffer(GL_UNIFORM_BUFFER);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    }
 }
+
+
 
 void Render(App* app)
 {
@@ -427,13 +493,17 @@ void Render(App* app)
                 Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
                 glUseProgram(texturedMeshProgram.handle);
 
+                glEnable(GL_DEPTH_TEST);
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                for (int i = 0; i < app->models.size(); ++i)
+                for (int idx = 0; idx < app->entities.size(); ++idx)
                 {
-                    Model& model = app->models[i];
+                    Entity& entity = app->entities[idx];
+                    Model& model = app->models[entity.modelIndex];
                     Mesh& mesh = app->meshes[model.meshIdx];
+
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, entity.localParamsOffset, entity.localParamsSize);
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                     {
@@ -592,4 +662,31 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     case GL_DEBUG_SEVERITY_LOW: ELOG(" - severity: GL_DEBUG_SEVERITY_LOW"); break;
     }
 
+}
+
+u32 Align(u32 value, u32 alignment)
+{
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
+void UpdateProjectionView(App* app)
+{
+    float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+    float znear = 0.1f;
+    float zfar = 1000.0f;
+    app->projection = perspective(radians(60.0f), aspectRatio, znear, zfar);
+    app->view = lookAt(app->camera.position, app->camera.target, { 0, 1, 0 });
+}
+
+mat4 TransformScale(const vec3& scaleFactors)
+{
+    mat4 transform = scale(scaleFactors);
+    return transform;
+}
+
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
+{
+    mat4 transform = translate(pos);
+    transform = scale(transform, scaleFactors);
+    return transform;
 }
