@@ -210,9 +210,9 @@ void Init(App* app)
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    u32 blockOffset = 0;
+    /*u32 blockOffset = 0;
     u32 blockSize = sizeof(glm::mat4) * 2;
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, blockOffset, blockSize);
+    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, Align(blockSize, app->uniformBlockAlignment), blockSize);*/
     // ------------------------------------------------------------
 
     // camera
@@ -253,21 +253,23 @@ void Init(App* app)
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
-    // patrick ------------------------------------------------------
-    Entity patrick = {};
-    patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
-    patrick.worldMatrix = TransformPositionScale({ 0.0, 0.0, 0.0}, vec3(1.0));
-    app->entities.push_back(patrick);
-
-    Entity patrick2 = {};
-    patrick2.modelIndex = patrick.modelIndex;
-    patrick2.worldMatrix = TransformPositionScale({ 5.0, 0.0, 0.0 }, vec3(1.0));
-    app->entities.push_back(patrick2);
-
-    // load program
+    // load program -------------------------------------------------
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
     FillInputVertexShaderLayout(texturedMeshProgram);
+
+    // patrick ------------------------------------------------------
+    vec3 patrickPositions[] = { {  0.0, 0.0, 0.0 }, 
+                                {  6.0, 0.0, 0.0 },
+                                { -6.0, 0.0, 0.0 } };
+    Entity patrick = {};
+    patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
+    for (int i = 0; i < ARRAY_COUNT(patrickPositions); ++i)
+    {
+        patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
+        app->entities.push_back(patrick);
+    }
+    
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
@@ -477,8 +479,11 @@ void Render(App* app)
 
                 for (int idx = 0; idx < app->entities.size(); ++idx)
                 {
-                    Model& model = app->models[app->entities[idx].modelIndex];
+                    Entity& entity = app->entities[idx];
+                    Model& model = app->models[entity.modelIndex];
                     Mesh& mesh = app->meshes[model.meshIdx];
+
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, entity.localParamsOffset, entity.localParamsSize);
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                     {
