@@ -256,7 +256,13 @@ void Init(App* app)
     // patrick ------------------------------------------------------
     Entity patrick = {};
     patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
+    patrick.worldMatrix = TransformPositionScale({ 0.0, 0.0, 0.0}, vec3(1.0));
     app->entities.push_back(patrick);
+
+    Entity patrick2 = {};
+    patrick2.modelIndex = patrick.modelIndex;
+    patrick2.worldMatrix = TransformPositionScale({ 5.0, 0.0, 0.0 }, vec3(1.0));
+    app->entities.push_back(patrick2);
 
     // load program
     app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
@@ -394,7 +400,7 @@ void Update(App* app)
         for (int i = 0; i < entities.size(); ++i)
         {
             // update entity transforms ------
-            entities[i].worldMatrix = TransformPositionScale( vec3(0.0f, 0.0f, 0.0f), vec3(1.0f));
+            //entities[i].worldMatrix = TransformPositionScale( vec3(0.0f, 0.0f, 0.0f), vec3(1.0f));
             mat4 worldViewProjection = app->projection * app->view * entities[i].worldMatrix;
 
             // -------------------------------
@@ -469,9 +475,9 @@ void Render(App* app)
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                for (int i = 0; i < app->entities.size(); ++i)
+                for (int idx = 0; idx < app->entities.size(); ++idx)
                 {
-                    Model& model = app->models[app->entities[i].modelIndex];
+                    Model& model = app->models[app->entities[idx].modelIndex];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
