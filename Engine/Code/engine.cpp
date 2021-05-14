@@ -10,7 +10,6 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include "assimp_model_loading.h"
-#include "buffer_management.h"
 
 using namespace glm;
 
@@ -206,10 +205,12 @@ void Init(App* app)
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
-    glGenBuffers(1, &app->bufferHandle);
+    app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
+
+    /*glGenBuffers(1, &app->bufferHandle);
     glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);*/
 
     /*u32 blockOffset = 0;
     u32 blockSize = sizeof(glm::mat4) * 2;
@@ -394,34 +395,43 @@ void Update(App* app)
     UpdateProjectionView(app);
     // update uniform buffer blocks
     {
-        glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+       /* glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
         u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-        u32 bufferHead = 0;
+        u32 bufferHead = 0;*/
+
+        BindBuffer(app->cbuffer);
+        MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
         std::vector<Entity>& entities = app->entities;
 
         for (int i = 0; i < entities.size(); ++i)
         {
             // update entity transforms ------
-            //entities[i].worldMatrix = TransformPositionScale( vec3(0.0f, 0.0f, 0.0f), vec3(1.0f));
-            mat4 worldViewProjection = app->projection * app->view * entities[i].worldMatrix;
+            Entity& e = entities[i];
+            mat4 worldViewProjection = app->projection * app->view * e.worldMatrix;
 
             // -------------------------------
+             /*bufferHead = Align(bufferHead, app->uniformBlockAlignment);
+            entities[i].localParamsOffset = bufferHead;*/
+            AlignHead(app->cbuffer, app->uniformBlockAlignment);
+            e.localParamsOffset = app->cbuffer.head;
+           
+            PushMat4(app->cbuffer, e.worldMatrix);
+            PushMat4(app->cbuffer, worldViewProjection);
 
-            bufferHead = Align(bufferHead, app->uniformBlockAlignment);
-            entities[i].localParamsOffset = bufferHead;
-
-            memcpy(bufferData + bufferHead, glm::value_ptr(entities[i].worldMatrix), sizeof(glm::mat4));
+            /*memcpy(bufferData + bufferHead, glm::value_ptr(e.worldMatrix), sizeof(glm::mat4));
             bufferHead += sizeof(glm::mat4);
 
             memcpy(bufferData + bufferHead, glm::value_ptr(worldViewProjection), sizeof(glm::mat4));
-            bufferHead += sizeof(glm::mat4);
+            bufferHead += sizeof(glm::mat4);*/
 
-            entities[i].localParamsSize = bufferHead - entities[i].localParamsOffset;
+            e.localParamsSize = app->cbuffer.head - e.localParamsOffset;
         }
 
-        glUnmapBuffer(GL_UNIFORM_BUFFER);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        UnmapBuffer(app->cbuffer);
+
+       /* glUnmapBuffer(GL_UNIFORM_BUFFER);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);*/
     }
 }
 
@@ -484,7 +494,7 @@ void Render(App* app)
                     Model& model = app->models[entity.modelIndex];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                     {

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "engine.h"
+#include "platform.h"
+#include <glad/glad.h>
 
 #define CreateConstantBuffer(size)     CreateBuffer(size, GL_UNIFORM_BUFFER, GL_STREAM_DRAW)
 #define CreateStaticVertexBuffer(size) CreateBuffer(size, GL_ARRAY_BUFFER, GL_STATIC_DRAW)
