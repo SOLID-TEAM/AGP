@@ -57,7 +57,7 @@ layout(binding = 0, std140) uniform GlobalParams
 {
 	vec3 uCameraPosition;
 	unsigned int uLightCount;
-	Light uLight[16];
+	Light uLight[2];
 };
 
 layout(binding = 1, std140) uniform LocalParams
@@ -95,18 +95,37 @@ layout(binding = 0, std140) uniform GlobalParams
 {
 	vec3 uCameraPosition;
 	unsigned int uLightCount;
-	Light uLight[16];
+	Light uLight[2];
 };
 
 void main()
 {
+	vec3 uNormal = normalize(vNormal);
+	vec3 diffuse, ambient;
+
+	float ambientFactor = 0.2;
+	float diffuseFactor = 0.8;
+	
 	for(int i = 0; i < uLightCount; ++i)
 	{
-	// TODO: sum all lights contributions
+		// TODO: sum all lights contributions
+		if(uLight[i].type == 1u)
+		{
+			float lightContribution = max(dot(normalize(uLight[i].direction), uNormal), 0.0);
+
+			diffuse = vec3(1) * uLight[i].color;//lightContribution * diffuseFactor * uLight[i].color;
+			ambient = lightContribution * ambientFactor * uLight[i].color;
+			diffuse = vec3(1);
+		}
 	}
 	//oColor = texture(uTexture, vTexCoord);
-	oColor = vec4(normalize(vNormal), 1.0);
+	//oColor = vec4(normalize(vNormal), 1.0);
 	//oColor = vec4(vPosition, 1.0);
+	vec4 baseColor = texture(uTexture, vTexCoord);
+	vec4 objColor = baseColor * vec4(ambient, 1.0) + // ambient
+					baseColor * vec4(diffuse, 1.0);  // diffuse (for all the lights)
+
+	oColor = vec4(diffuse, 1.0);
 }
 
 #endif

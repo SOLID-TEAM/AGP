@@ -218,8 +218,20 @@ void Init(App* app)
     // ------------------------------------------------------------
 
     // camera
-    app->camera.position = {5.0, 5.0, 10.0};
+    app->camera.position = { 5.0, 5.0, 10.0 };
     app->camera.target = { 0.0, 0.0, 0.0 };
+
+    // create some lights
+    Light light = {};
+    light.color = { 1.0, 1.0, 1.0 };
+    light.direction = { 0,-1, 0 };
+    light.type = LightType::LightType_Directional;
+    app->lights.push_back(light);
+
+    light.position = { 0.0, 4.0, 5.0 };
+    light.type = LightType::LightType_Point;
+    app->lights.push_back(light);
+
 
     // Geometry
     //glGenBuffers(1, &app->embeddedVertices);
@@ -395,10 +407,10 @@ void Update(App* app)
     UpdateProjectionView(app);
     // update uniform global params buffer block
     {
-        app->globalParamsOffset = app->cbuffer.head;
-
         BindBuffer(app->cbuffer);
         MapBuffer(app->cbuffer, GL_WRITE_ONLY);
+
+        app->globalParamsOffset = app->cbuffer.head;
 
         PushVec3(app->cbuffer, app->camera.position);
         PushUInt(app->cbuffer, app->lights.size());
@@ -414,9 +426,10 @@ void Update(App* app)
             PushVec3(app->cbuffer, l.position);
         }
 
+        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
+
         UnmapBuffer(app->cbuffer);
 
-        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
     }
 
     // update uniform local params buffer block
