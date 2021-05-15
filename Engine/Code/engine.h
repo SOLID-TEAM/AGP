@@ -250,6 +250,11 @@ struct App
     u32 globalParamsOffset;
     u32 globalParamsSize;
 
+    // framebuffer object and attachments
+    GLuint fbo;
+    GLuint colorAttachmentHandle;
+    GLuint depthAttachmentHandle;
+
     //glm::mat4 worldMatrix;
     //glm::mat4 worldViewProjectionMatrix;
     mat4 view;
