@@ -211,8 +211,8 @@ void Init(App* app)
 
     // camera -----------------------------------------------------
 
-    app->camera.position = { 5.0, 5.0, 10.0 };
-    app->camera.target = { 0.0, 0.0, 0.0 };
+    app->camera.position = { 0.f , 0.f , -10.f};
+    app->camera.finalPitch = app->camera.finalYaw = app->camera.pitch = app->camera.yaw = 0.f;
 
     // create some lights -----------------------------------------
     // directional front from up
@@ -383,12 +383,19 @@ void Init(App* app)
 
    // Load Default Models
 
-   //LoadDefaultModel(DefaultModelType::Sphere, app);
-
    for (int i = 0; i < (int)DefaultModelType::Max; ++i)
    {
        app->defaultModelsId[i] = LoadDefaultModel( (DefaultModelType)i, app);
    }
+
+   // Load Test  
+
+   Entity defaultElement = {};
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
+   defaultElement.worldMatrix = TransformPositionScale(vec3(0., 5., -5.), vec3(2.0));
+   app->entities.push_back(defaultElement);
+
+
 }
 
 void Gui(App* app)
@@ -431,6 +438,8 @@ void Update(App* app)
     }
 
     // update projection and view mat
+
+    UpdateCamera(app);
     UpdateProjectionView(app);
 
     // update uniform global/local params buffer block
@@ -704,13 +713,76 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     }
 }
 
+void UpdateCamera(App* app)
+{
+    vec3 finalPosition(0.f);
+    float cameraSpeed = 8.f;
+    bool doubleSpeed = false;
+
+    // Orientation 
+
+    if (app->input.mouseButtons[0] == BUTTON_PRESSED && app->input.mouseDelta != vec2(0.f))
+    {
+        app->camera.finalYaw += app->input.mouseDelta.x * 0.005f ;
+        app->camera.finalPitch += app->input.mouseDelta.y * 0.005f;
+    }
+    
+    app->camera.yaw = Lerp(app->camera.yaw, app->camera.finalYaw, clamp(app->deltaTime * 10.f, 0.f, 1.f));
+    app->camera.pitch = Lerp( app->camera.pitch, app->camera.finalPitch, clamp(app->deltaTime * 10.f, 0.f, 1.f));
+
+    quat rotYaw = glm::angleAxis(app->camera.yaw, vec3(0.f, 1.f, 0.f));
+    quat rotPitch = glm::angleAxis(app->camera.pitch, vec3(1.f, 0.f, 0.f));
+    app->view = glm::mat4_cast( rotPitch * rotYaw);
+
+    vec3 right = vec3(app->view[0][0], app->view[1][0], app->view[2][0]);
+    vec3 forward = vec3(app->view[0][2], app->view[1][2], app->view[2][2]);
+    vec3 up = vec3(0.f, 1.f, 0.f);
+
+    // Movement 
+
+    if (app->input.keys[Key::K_D] == BUTTON_PRESSED)
+    {
+        finalPosition -= right;
+    }
+    if (app->input.keys[Key::K_A] == BUTTON_PRESSED)
+    {
+        finalPosition += right;
+    }
+    if (app->input.keys[Key::K_W] == BUTTON_PRESSED)
+    {
+        finalPosition += forward;
+    }
+    if (app->input.keys[Key::K_S] == BUTTON_PRESSED)
+    {
+        finalPosition -= forward;
+    }
+    if (app->input.keys[Key::K_Q] == BUTTON_PRESSED)
+    {
+        finalPosition += up;
+    }
+    if (app->input.keys[Key::K_E] == BUTTON_PRESSED)
+    {
+        finalPosition -= up;
+    }
+    if (app->input.keys[Key::K_C] == BUTTON_PRESSED)
+    {
+        doubleSpeed = true;
+    }
+
+    if (finalPosition != vec3(0.f))
+    {
+        app->camera.position += glm::normalize(finalPosition) * cameraSpeed * app->deltaTime * (doubleSpeed ? 2.f : 1.f);
+    }
+
+    app->view = glm::translate(app->view, app->camera.position);
+}
+
 void UpdateProjectionView(App* app)
 {
     float aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
     float znear = 0.1f;
     float zfar = 1000.0f;
     app->projection = perspective(radians(60.0f), aspectRatio, znear, zfar);
-    app->view = lookAt(app->camera.position, app->camera.target, { 0, 1, 0 });
 }
 
 mat4 TransformScale(const vec3& scaleFactors)
@@ -724,4 +796,8 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     mat4 transform = translate(pos);
     transform = scale(transform, scaleFactors);
     return transform;
+}
+
+float Lerp(float a, float b, float t) {
+    return a + t * (b - a);
 }

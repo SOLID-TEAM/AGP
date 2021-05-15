@@ -45,7 +45,10 @@ struct Entity
 struct Camera
 {
     vec3 position;
-    vec3 target;
+    //vec3 target;
+    float yaw, pitch;
+    float finalYaw, finalPitch;
+
 };
 
 struct VertexV3V2
@@ -272,9 +275,11 @@ void Render(App* app);
 //
 u32 LoadTexture2D(App* app, const char* filepath);
 //
+void UpdateCamera(App* app);
 void UpdateProjectionView(App* app);
 mat4 TransformScale(const vec3& scaleFactors);
 mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors);
+float Lerp(float a, float b, float f);
 //
 void FillOpenGLInfo(App* app);
 void FillInputVertexShaderLayout(Program& program);
