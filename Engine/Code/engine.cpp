@@ -202,36 +202,43 @@ void Init(App* app)
     }
 
     // uniform buffers -------------------------------------------
+
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
     app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
-    /*glGenBuffers(1, &app->bufferHandle);
-    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
-    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);*/
+    // camera -----------------------------------------------------
 
-    /*u32 blockOffset = 0;
-    u32 blockSize = sizeof(glm::mat4) * 2;
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, Align(blockSize, app->uniformBlockAlignment), blockSize);*/
-    // ------------------------------------------------------------
-
-    // camera
     app->camera.position = { 5.0, 5.0, 10.0 };
     app->camera.target = { 0.0, 0.0, 0.0 };
 
-    // create some lights
+    // create some lights -----------------------------------------
+    // directional front from up
     Light light = {};
     light.color = { 1.0, 1.0, 1.0 };
-    light.direction = { 0,-1, -1 };
+    light.direction = { 0, -1, -1 };
     light.type = LightType::LightType_Directional;
     app->lights.push_back(light);
+    // directional back from up
+    light.color = { 1.0, 1.0, 1.0 };
+    light.direction = { 0, -1, 1 };
+    app->lights.push_back(light);
 
-    light.position = { 0.0, 4.0, 5.0 };
+    // point lights
+    light.color = { 0.0, 0.0, 1.0 };
+    light.position = { 0.0, 0.0, 6.0 };
     light.type = LightType::LightType_Point;
     app->lights.push_back(light);
 
+    light.color = { 1.0, 0.0, 0.0 };
+    light.position = { -6.0, 0.0, 3.0 };
+    app->lights.push_back(light);
+
+    light.color = { 0.0, 1.0, 0.0 };
+    light.position = { 6.0, 0.0, 3.0 };
+    app->lights.push_back(light);
+    // ------------------------------------------------------------
 
     // Geometry
     //glGenBuffers(1, &app->embeddedVertices);
