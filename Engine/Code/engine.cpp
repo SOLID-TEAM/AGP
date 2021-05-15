@@ -452,10 +452,9 @@ void Gui(App* app)
         ImGui::End();
     }
 
-    ImGui::Begin("RenderTest");
+   /* ImGui::Begin("RenderTest");
     ImGui::Image((ImTextureID)app->colorAttachmentHandle, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
-    ImGui::End();
-    
+    ImGui::End();*/
 }
 
 void Update(App* app)
@@ -640,8 +639,8 @@ void Render(App* app)
                     GLuint vao = FindVAO(mesh, 0, programTexturedGeometry);
                     glBindVertexArray(vao);
 
-                    glEnable(GL_BLEND);
-                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                    /*glEnable(GL_BLEND);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
 
                     //glUniform1i(app->programUniformTexture, 0);
                     glActiveTexture(GL_TEXTURE0);
