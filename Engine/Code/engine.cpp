@@ -344,7 +344,7 @@ void Init(App* app)
 
     // textured quad to new structs ----------------------------------
     // textured geometry program
-    /*app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
     Program& texturedGeoProgram = app->programs[app->texturedGeometryProgramIdx];
     FillInputVertexShaderLayout(texturedGeoProgram);
 
@@ -352,27 +352,28 @@ void Init(App* app)
     app->meshes.push_back(Mesh{});
     Mesh& mesh = app->meshes.back();
     u32 meshIdx = (u32)app->meshes.size() - 1u;
+    app->texturedQuadMeshIdx = meshIdx;
 
-    app->models.push_back(Model{});
+   /* app->models.push_back(Model{});
     Model& model = app->models.back();
     model.meshIdx = meshIdx;
-    u32 modelIdx = (u32)app->models.size() - 1u;
+    u32 modelIdx = (u32)app->models.size() - 1u;*/
 
     // basic material
-    u32 baseMeshMaterialIndex = (u32)app->materials.size();
-    app->materials.push_back(Material{});
-    Material& material = app->materials.back();
-    material.name = "basic_white_mat";
-    material.albedo = vec3(1.0f, 1.0f, 1.0f);
-    //material.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
-    //material.smoothness = 10 / 256.0f;
-    material.albedoTextureIdx = app->diceTexIdx;
-    model.materialIdx.push_back(baseMeshMaterialIndex);
+    //u32 baseMeshMaterialIndex = (u32)app->materials.size();
+    //app->materials.push_back(Material{});
+    //Material& material = app->materials.back();
+    //material.name = "basic_white_mat";
+    //material.albedo = vec3(1.0f, 1.0f, 1.0f);
+    ////material.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
+    ////material.smoothness = 10 / 256.0f;
+    //material.albedoTextureIdx = app->diceTexIdx;
+    //model.materialIdx.push_back(baseMeshMaterialIndex);
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
     vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, 3 * sizeof(float) });
+    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, 3 * sizeof(float) });
     vertexBufferLayout.stride = 5 * sizeof(float);
 
     // add submesh into mesh
@@ -414,7 +415,7 @@ void Init(App* app)
    glGenBuffers(1, &mesh.indexBufferHandle);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); */
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
    // ------------------------------------------------------------------------
 
@@ -623,6 +624,36 @@ void Render(App* app)
                 glUseProgram(0);
 
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+                // render screen quad with selected texture from combobox
+                // TODO: combobox
+                {
+                    Mesh& mesh = app->meshes[app->texturedQuadMeshIdx];
+                    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+                    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+                    glUseProgram(programTexturedGeometry.handle);
+
+                    GLuint vao = FindVAO(mesh, 0, programTexturedGeometry);
+                    glBindVertexArray(vao);
+
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+                    //glUniform1i(app->programUniformTexture, 0);
+                    glActiveTexture(GL_TEXTURE0);
+                    GLuint textureHandle = app->colorAttachmentHandle;
+                    glBindTexture(GL_TEXTURE_2D, textureHandle);
+
+                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+                    glBindVertexArray(0);
+                    glUseProgram(0); 
+                }
+
             }
 
             break;

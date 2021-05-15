@@ -57,10 +57,10 @@ struct VertexV3V2
 // Hardcoded plane model with uv coords and indices -----
 
 const VertexV3V2 vertices[] = {
-    { glm::vec3(-0.5, -0.5, 0.0), glm::vec2(0.0, 0.0)}, // bottom left vertex
-    { glm::vec3(0.5, -0.5, 0.0), glm::vec2(1.0, 0.0) }, // bottom right vertex
-    { glm::vec3(0.5, 0.5, 0.0), glm::vec2(1.0, 1.0)} , // top right vertex
-    { glm::vec3(-0.5, 0.5, 0.0), glm::vec2(0.0, 1.0) } // top left vertex
+    { glm::vec3(-1.0, -1.0, 0.0), glm::vec2(0.0, 0.0)}, // bottom left vertex
+    { glm::vec3(1.0, -1.0, 0.0), glm::vec2(1.0, 0.0) }, // bottom right vertex
+    { glm::vec3(1.0, 1.0, 0.0), glm::vec2(1.0, 1.0)} , // top right vertex
+    { glm::vec3(-1.0, 1.0, 0.0), glm::vec2(0.0, 1.0) } // top left vertex
 };
 
 const u32 indices[] = {
@@ -240,7 +240,7 @@ struct App
     u32 defaultMaterialId;
 
     // mesh for textured quad
-    Mesh texturedQuadMesh;
+    u32 texturedQuadMeshIdx;
 
     // -----
     GLint maxUniformBufferSize;
