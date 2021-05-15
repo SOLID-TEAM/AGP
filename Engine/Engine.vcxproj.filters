@@ -66,6 +66,9 @@
     <ClCompile Include="Code\model_loading.cpp">
       <Filter>Engine\Model Loading</Filter>
     </ClCompile>
+    <ClCompile Include="Code\buffer_management.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThirdParty\imgui-docking\imconfig.h">
@@ -118,6 +121,9 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\par_shapes\include\par_shapes.h">
       <Filter>ParShapes</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\buffer_management.h">
+      <Filter>Engine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

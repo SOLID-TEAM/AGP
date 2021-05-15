@@ -23,7 +23,7 @@ GLuint CreateProgramFromSource(String programSource, const char* shaderName)
 
     char versionString[] = "#version 430\n";
     char shaderNameDefine[128];
-    sprintf(shaderNameDefine, "#define %s\n", shaderName);
+    sprintf_s(shaderNameDefine, "#define %s\n", shaderName);
     char vertexShaderDefine[] = "#define VERTEX\n";
     char fragmentShaderDefine[] = "#define FRAGMENT\n";
 
@@ -203,22 +203,43 @@ void Init(App* app)
     }
 
     // uniform buffers -------------------------------------------
+
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
-    glGenBuffers(1, &app->bufferHandle);
-    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
-    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
-    /*u32 blockOffset = 0;
-    u32 blockSize = sizeof(glm::mat4) * 2;
-    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, Align(blockSize, app->uniformBlockAlignment), blockSize);*/
-    // ------------------------------------------------------------
+    // camera -----------------------------------------------------
 
-    // camera
-    app->camera.position = {5.0, 5.0, 10.0};
+    app->camera.position = { 5.0, 5.0, 10.0 };
     app->camera.target = { 0.0, 0.0, 0.0 };
+
+    // create some lights -----------------------------------------
+    // directional front from up
+    Light light = {};
+    light.color = { 1.0, 1.0, 1.0 };
+    light.direction = { 0, -1, -1 };
+    light.type = LightType::LightType_Directional;
+    app->lights.push_back(light);
+    // directional back from up
+    light.color = { 1.0, 1.0, 1.0 };
+    light.direction = { 0, -1, 1 };
+    app->lights.push_back(light);
+
+    // point lights
+    light.color = { 0.0, 0.0, 1.0 };
+    light.position = { 0.0, 0.0, 6.0 };
+    light.type = LightType::LightType_Point;
+    app->lights.push_back(light);
+
+    light.color = { 1.0, 0.0, 0.0 };
+    light.position = { -6.0, 0.0, 3.0 };
+    app->lights.push_back(light);
+
+    light.color = { 0.0, 1.0, 0.0 };
+    light.position = { 6.0, 0.0, 3.0 };
+    app->lights.push_back(light);
+    // ------------------------------------------------------------
 
     // Geometry
     //glGenBuffers(1, &app->embeddedVertices);
@@ -411,36 +432,54 @@ void Update(App* app)
 
     // update projection and view mat
     UpdateProjectionView(app);
-    // update uniform buffer blocks
+
+    // update uniform global/local params buffer block
     {
-        glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
-        u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-        u32 bufferHead = 0;
+        BindBuffer(app->cbuffer);
+        MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
-        std::vector<Entity>& entities = app->entities;
-
-        for (int i = 0; i < entities.size(); ++i)
         {
-            // update entity transforms ------
-            //entities[i].worldMatrix = TransformPositionScale( vec3(0.0f, 0.0f, 0.0f), vec3(1.0f));
-            mat4 worldViewProjection = app->projection * app->view * entities[i].worldMatrix;
+            app->globalParamsOffset = app->cbuffer.head;
 
-            // -------------------------------
+            PushVec3(app->cbuffer, app->camera.position);
+            PushUInt(app->cbuffer, app->lights.size());
 
-            bufferHead = Align(bufferHead, app->uniformBlockAlignment);
-            entities[i].localParamsOffset = bufferHead;
+            for (u32 i = 0; i < app->lights.size(); ++i)
+            {
+                AlignHead(app->cbuffer, sizeof(vec4));
 
-            memcpy(bufferData + bufferHead, glm::value_ptr(entities[i].worldMatrix), sizeof(glm::mat4));
-            bufferHead += sizeof(glm::mat4);
+                Light& l = app->lights[i];
+                PushUInt(app->cbuffer, l.type);
+                PushVec3(app->cbuffer, l.color);
+                PushVec3(app->cbuffer, l.direction);
+                PushVec3(app->cbuffer, l.position);
+            }
 
-            memcpy(bufferData + bufferHead, glm::value_ptr(worldViewProjection), sizeof(glm::mat4));
-            bufferHead += sizeof(glm::mat4);
-
-            entities[i].localParamsSize = bufferHead - entities[i].localParamsOffset;
+            app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
         }
 
-        glUnmapBuffer(GL_UNIFORM_BUFFER);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        // update uniform local params buffer block
+        {
+            std::vector<Entity>& entities = app->entities;
+
+            for (int i = 0; i < entities.size(); ++i)
+            {
+                // update entity transforms ------
+                Entity& e = entities[i];
+                mat4 worldViewProjection = app->projection * app->view * e.worldMatrix;
+
+                // -------------------------------
+                AlignHead(app->cbuffer, app->uniformBlockAlignment);
+                e.localParamsOffset = app->cbuffer.head;
+
+                PushMat4(app->cbuffer, e.worldMatrix);
+                PushMat4(app->cbuffer, worldViewProjection);
+
+                e.localParamsSize = app->cbuffer.head - e.localParamsOffset;
+            }
+        }
+
+        UnmapBuffer(app->cbuffer);
     }
 }
 
@@ -497,13 +536,15 @@ void Render(App* app)
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
                 for (int idx = 0; idx < app->entities.size(); ++idx)
                 {
                     Entity& entity = app->entities[idx];
                     Model& model = app->models[entity.modelIndex];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->bufferHandle, entity.localParamsOffset, entity.localParamsSize);
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                     {
@@ -661,12 +702,6 @@ void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei l
     case GL_DEBUG_SEVERITY_MEDIUM: ELOG(" - severity: GL_DEBUG_SEVERITY_MEDIUM"); break;
     case GL_DEBUG_SEVERITY_LOW: ELOG(" - severity: GL_DEBUG_SEVERITY_LOW"); break;
     }
-
-}
-
-u32 Align(u32 value, u32 alignment)
-{
-    return (value + alignment - 1) & ~(alignment - 1);
 }
 
 void UpdateProjectionView(App* app)

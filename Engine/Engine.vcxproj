@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Code\assimp_model_loading.cpp" />
+    <ClCompile Include="Code\buffer_management.cpp" />
     <ClCompile Include="Code\engine.cpp" />
     <ClCompile Include="Code\generator_model_loading.cpp" />
     <ClCompile Include="Code\model_loading.cpp" />
@@ -36,6 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Code\assimp_model_loading.h" />
+    <ClInclude Include="Code\buffer_management.h" />
     <ClInclude Include="Code\engine.h" />
     <ClInclude Include="Code\generator_model_loading.h" />
     <ClInclude Include="Code\model_loading.h" />

@@ -6,6 +6,7 @@
 
 #include "platform.h"
 #include <glad/glad.h>
+#include "buffer_management.h"
 
 #define BINDING(b) b
 
@@ -17,6 +18,21 @@ typedef glm::vec4  vec4;
 typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
+
+
+enum LightType
+{
+    LightType_Directional,
+    LightType_Point
+};
+
+struct Light
+{
+    LightType    type;
+    vec3         color;
+    vec3         direction;
+    vec3         position;
+};
 
 struct Entity
 {
@@ -188,6 +204,7 @@ struct App
     std::vector<Mesh>     meshes;
     std::vector<Model>    models;
     std::vector<Program>  programs;
+    std::vector<Light>    lights;
 
     // program indices
     u32 texturedGeometryProgramIdx;
@@ -228,7 +245,10 @@ struct App
     // -----
     GLint maxUniformBufferSize;
     GLint uniformBlockAlignment;
-    GLuint bufferHandle;
+    //GLuint bufferHandle;
+    Buffer cbuffer;
+    u32 globalParamsOffset;
+    u32 globalParamsSize;
 
     //glm::mat4 worldMatrix;
     //glm::mat4 worldViewProjectionMatrix;
@@ -251,8 +271,6 @@ void Render(App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
-//
-u32 Align(u32 value, u32 alignment);
 //
 void UpdateProjectionView(App* app);
 mat4 TransformScale(const vec3& scaleFactors);
