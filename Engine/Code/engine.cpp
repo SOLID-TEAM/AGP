@@ -224,7 +224,7 @@ void Init(App* app)
     // create some lights
     Light light = {};
     light.color = { 1.0, 1.0, 1.0 };
-    light.direction = { 0,-1, 0 };
+    light.direction = { 0,-1, -1 };
     light.type = LightType::LightType_Directional;
     app->lights.push_back(light);
 
@@ -405,54 +405,51 @@ void Update(App* app)
 
     // update projection and view mat
     UpdateProjectionView(app);
-    // update uniform global params buffer block
+
+    // update uniform global/local params buffer block
     {
         BindBuffer(app->cbuffer);
         MapBuffer(app->cbuffer, GL_WRITE_ONLY);
 
-        app->globalParamsOffset = app->cbuffer.head;
-
-        PushVec3(app->cbuffer, app->camera.position);
-        PushUInt(app->cbuffer, app->lights.size());
-
-        for (u32 i = 0; i < app->lights.size(); ++i)
         {
-            AlignHead(app->cbuffer, sizeof(vec4));
+            app->globalParamsOffset = app->cbuffer.head;
 
-            Light& l = app->lights[i];
-            PushUInt(app->cbuffer, l.type);
-            PushVec3(app->cbuffer, l.color);
-            PushVec3(app->cbuffer, l.direction);
-            PushVec3(app->cbuffer, l.position);
+            PushVec3(app->cbuffer, app->camera.position);
+            PushUInt(app->cbuffer, app->lights.size());
+
+            for (u32 i = 0; i < app->lights.size(); ++i)
+            {
+                AlignHead(app->cbuffer, sizeof(vec4));
+
+                Light& l = app->lights[i];
+                PushUInt(app->cbuffer, l.type);
+                PushVec3(app->cbuffer, l.color);
+                PushVec3(app->cbuffer, l.direction);
+                PushVec3(app->cbuffer, l.position);
+            }
+
+            app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
         }
 
-        app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
-
-        UnmapBuffer(app->cbuffer);
-
-    }
-
-    // update uniform local params buffer block
-    {
-        BindBuffer(app->cbuffer);
-        MapBuffer(app->cbuffer, GL_WRITE_ONLY);
-
-        std::vector<Entity>& entities = app->entities;
-
-        for (int i = 0; i < entities.size(); ++i)
+        // update uniform local params buffer block
         {
-            // update entity transforms ------
-            Entity& e = entities[i];
-            mat4 worldViewProjection = app->projection * app->view * e.worldMatrix;
+            std::vector<Entity>& entities = app->entities;
 
-            // -------------------------------
-            AlignHead(app->cbuffer, app->uniformBlockAlignment);
-            e.localParamsOffset = app->cbuffer.head;
-           
-            PushMat4(app->cbuffer, e.worldMatrix);
-            PushMat4(app->cbuffer, worldViewProjection);
+            for (int i = 0; i < entities.size(); ++i)
+            {
+                // update entity transforms ------
+                Entity& e = entities[i];
+                mat4 worldViewProjection = app->projection * app->view * e.worldMatrix;
 
-            e.localParamsSize = app->cbuffer.head - e.localParamsOffset;
+                // -------------------------------
+                AlignHead(app->cbuffer, app->uniformBlockAlignment);
+                e.localParamsOffset = app->cbuffer.head;
+
+                PushMat4(app->cbuffer, e.worldMatrix);
+                PushMat4(app->cbuffer, worldViewProjection);
+
+                e.localParamsSize = app->cbuffer.head - e.localParamsOffset;
+            }
         }
 
         UnmapBuffer(app->cbuffer);
