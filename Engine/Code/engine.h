@@ -212,6 +212,7 @@ struct App
     // program indices
     u32 texturedGeometryProgramIdx;
     u32 texturedMeshProgramIdx;
+    u32 geometryPassProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -254,9 +255,13 @@ struct App
     u32 globalParamsSize;
 
     // framebuffer object and attachments
-    GLuint fbo;
-    GLuint colorAttachmentHandle;
+    GLuint gBuffer;
+    GLuint gPosition;
+    GLuint gNormal;
+    GLuint gAlbedoSpec;
     GLuint depthAttachmentHandle;
+
+    GLuint selectedAttachment; // imgui combobox
 
     //glm::mat4 worldMatrix;
     //glm::mat4 worldViewProjectionMatrix;

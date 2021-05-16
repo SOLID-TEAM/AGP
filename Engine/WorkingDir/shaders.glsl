@@ -35,6 +35,57 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
+#ifdef GEOMETRY_PASS
+
+#if defined(VERTEX)
+
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aTexCoord;
+
+layout(binding = 1, std140) uniform LocalParams
+{
+	mat4 uWorldMatrix;
+	mat4 uWorldViewProjectionMatrix;
+};
+
+out vec3 vPosition;
+out vec3 vNormal;
+out vec2 vTexCoord;
+
+void main()
+{
+	vTexCoord = aTexCoord;
+	vPosition = vec3(uWorldMatrix * vec4(aPosition, 1.0));
+	vNormal = vec3(uWorldMatrix * vec4(aNormal, 0.0));
+	gl_Position = uWorldViewProjectionMatrix * vec4(aPosition, 1.0);
+}
+
+#elif defined(FRAGMENT)
+
+layout(location = 0) out vec4 gPosition; // TODO: no texture output if vec3
+layout(location = 1) out vec4 gNormal;   // no texture output if vec3
+layout(location = 2) out vec4 gAlbedoSpec;
+
+in vec3 vPosition;
+in vec3 vNormal;
+in vec2 vTexCoord;
+
+uniform sampler2D uTexture;
+
+void main()
+{
+	gPosition = vec4(vPosition,1.0);
+	gNormal = vec4(normalize(vNormal), 1.0);
+	gAlbedoSpec = texture(uTexture, vTexCoord);
+}
+
+#endif
+#endif
+
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
 #ifdef SIMPLE_PATRICK
 
 struct Light
