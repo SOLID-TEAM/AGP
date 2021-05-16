@@ -259,6 +259,7 @@ struct App
     GLuint gPosition;
     GLuint gNormal;
     GLuint gAlbedoSpec;
+    GLuint gDepthGray;
     GLuint depthAttachmentHandle;
 
     GLuint selectedAttachment; // imgui combobox

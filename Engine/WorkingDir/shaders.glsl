@@ -66,6 +66,7 @@ void main()
 layout(location = 0) out vec4 gPosition; // TODO: no texture output if vec3
 layout(location = 1) out vec4 gNormal;   // no texture output if vec3
 layout(location = 2) out vec4 gAlbedoSpec;
+layout(location = 3) out vec4 gDepthGray;
 
 in vec3 vPosition;
 in vec3 vNormal;
@@ -78,6 +79,7 @@ void main()
 	gPosition = vec4(vPosition,1.0);
 	gNormal = vec4(normalize(vNormal), 1.0);
 	gAlbedoSpec = texture(uTexture, vTexCoord);
+	gDepthGray = vec4(gl_FragCoord.zzz, 1.0);
 }
 
 #endif
