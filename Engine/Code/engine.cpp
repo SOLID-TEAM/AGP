@@ -268,6 +268,8 @@ void Init(App* app)
     light.direction = { 0, -1, -1 };
     light.type = LightType::LightType_Directional;
     app->lights.push_back(light);
+    
+    
     // directional back from up
     light.color = { 1.0, 1.0, 1.0 };
     light.direction = { 0, -1, 1 };
@@ -286,6 +288,7 @@ void Init(App* app)
     light.color = { 0.0, 1.0, 0.0 };
     light.position = { 6.0, 0.0, 3.0 };
     app->lights.push_back(light);
+
     // ------------------------------------------------------------
 
     // Geometry
@@ -339,7 +342,7 @@ void Init(App* app)
         patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
         app->entities.push_back(patrick);
     }
-    
+
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
@@ -426,7 +429,7 @@ void Init(App* app)
 
    Material& defaultMaterial = app->materials.back();
    defaultMaterial.name = "defaultMaterial";
-   defaultMaterial.albedo = vec3(1.0f, 1.0f, 1.0f);
+   defaultMaterial.albedo = vec3(.8f, .8f, .8f);
    defaultMaterial.albedoTextureIdx = app->whiteTexIdx;
 
    // Load Default Models
@@ -436,11 +439,11 @@ void Init(App* app)
        app->defaultModelsId[i] = LoadDefaultModel( (DefaultModelType)i, app);
    }
 
-   // Load Test  
+   // Load Default Plane  
 
    Entity defaultElement = {};
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
-   defaultElement.worldMatrix = TransformPositionScale(vec3(0., 5., -5.), vec3(2.0));
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
+   defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., -3.8f , 0), vec3(90.f ,0.f ,0.f), vec3(500.f));
    app->entities.push_back(defaultElement);
 
 
@@ -552,38 +555,40 @@ void Render(App* app)
     {
         case Mode_TexturedQuad:
             {
-                // TODO: Draw your textured quad here!
-                // - clear the framebuffer
-                // - set the viewport
-                // - set the blending state
-                // - bind the texture into unit 0
-                // - bind the program 
-                //   (...and make its texture sample from unit 0)
-                // - bind the vao
-                // - glDrawElements() !!!
+                {
+                    // TODO: Draw your textured quad here!
+                    // - clear the framebuffer
+                    // - set the viewport
+                    // - set the blending state
+                    // - bind the texture into unit 0
+                    // - bind the program 
+                    //   (...and make its texture sample from unit 0)
+                    // - bind the vao
+                    // - glDrawElements() !!!
 
 
-                /*glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    /*glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-                glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-                Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
-                glUseProgram(programTexturedGeometry.handle);
-                glBindVertexArray(app->vao);
+                    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
+                    glUseProgram(programTexturedGeometry.handle);
+                    glBindVertexArray(app->vao);
 
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                glUniform1i(app->programUniformTexture, 0);
-                glActiveTexture(GL_TEXTURE0);
-                GLuint textureHandle = app->textures[app->diceTexIdx].handle;
-                glBindTexture(GL_TEXTURE_2D , textureHandle);
+                    glUniform1i(app->programUniformTexture, 0);
+                    glActiveTexture(GL_TEXTURE0);
+                    GLuint textureHandle = app->textures[app->diceTexIdx].handle;
+                    glBindTexture(GL_TEXTURE_2D , textureHandle);
 
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
-                glBindVertexArray(0);
-                glUseProgram(0);*/
+                    glBindVertexArray(0);
+                    glUseProgram(0);*/
+                }
 
                 glBindFramebuffer(GL_FRAMEBUFFER, app->fbo);
                 GLuint drawBuffers[] = { app->colorAttachmentHandle };
@@ -885,6 +890,18 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     mat4 transform = translate(pos);
     transform = scale(transform, scaleFactors);
     return transform;
+}
+
+mat4 TransformWorldMatrix(const vec3& position, const vec3& rotation, const vec3& scaleFactors)
+{
+    mat4 transform = translate(position);
+  
+    transform = rotate(transform, glm::radians(rotation.x), vec3(1,0,0));
+    transform = rotate(transform, glm::radians(rotation.y), vec3(0,1,0));
+    transform = rotate(transform, glm::radians(rotation.z), vec3(0,0,1));
+    transform = scale(transform, scaleFactors);
+    return transform;
+
 }
 
 float Lerp(float a, float b, float t) {

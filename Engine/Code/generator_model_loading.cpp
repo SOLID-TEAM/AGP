@@ -19,7 +19,9 @@ u32 LoadDefaultModel(DefaultModelType type, App* app)
 	model.materialIdx.push_back(app->defaultMaterialId);
 
 	par_shapes_mesh* parMesh = GenerateDefaultModelData(type);
-	par_shapes_compute_normals(parMesh);
+	
+	if (!parMesh->normals)
+		par_shapes_compute_normals(parMesh);
 
 	std::vector<float> vertices;
 	std::vector<u32> indices;
@@ -91,13 +93,16 @@ par_shapes_mesh* GenerateDefaultModelData(DefaultModelType type)
 	switch (type)
 	{
 	case DefaultModelType::Sphere: {
-		mesh = par_shapes_create_parametric_sphere(20, 20);
+		mesh = par_shapes_create_subdivided_sphere(4);
 		break; }
 	case DefaultModelType::Cube: {
 		mesh = par_shapes_create_cube();
+
 		break; }
 	case DefaultModelType::Plane: {
 		mesh = par_shapes_create_plane(1, 1);
+		par_shapes_translate(mesh, -0.5f, -0.5f, 0.f);
+
 		break; }
 
 	default:

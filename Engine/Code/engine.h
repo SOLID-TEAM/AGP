@@ -284,6 +284,7 @@ void UpdateCamera(App* app);
 void UpdateProjectionView(App* app);
 mat4 TransformScale(const vec3& scaleFactors);
 mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors);
+mat4 TransformWorldMatrix(const vec3& position, const vec3& rotation, const vec3& scaleFactors);
 float Lerp(float a, float b, float f);
 //
 void FillOpenGLInfo(App* app);
