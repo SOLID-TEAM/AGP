@@ -269,7 +269,6 @@ void Init(App* app)
     light.type = LightType::LightType_Directional;
     app->lights.push_back(light);
     
-    
     // directional back from up
     light.color = { 1.0, 1.0, 1.0 };
     light.direction = { 0, -1, 1 };
@@ -319,8 +318,9 @@ void Init(App* app)
     //app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 
     //// Texture initialization
-    app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
+    app->diceTexIdx = LoadTexture2D(app, "dice.png");
+    
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
@@ -343,6 +343,10 @@ void Init(App* app)
         app->entities.push_back(patrick);
     }
 
+    Entity plane = {};
+    plane.modelIndex = LoadModel(app, "Patrick/untitled.obj");
+    plane.worldMatrix = TransformWorldMatrix({ 0.0,0.0,0.0 }, {90,0,0}, vec3(1.0));
+    app->entities.push_back(plane);
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
@@ -441,10 +445,10 @@ void Init(App* app)
 
    // Load Default Plane  
 
-   Entity defaultElement = {};
+  /* Entity defaultElement = {};
    defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
    defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., -3.8f , 0), vec3(90.f ,0.f ,0.f), vec3(500.f));
-   app->entities.push_back(defaultElement);
+   app->entities.push_back(defaultElement);*/
 
 
 }
