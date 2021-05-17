@@ -342,11 +342,6 @@ void Init(App* app)
         patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
         app->entities.push_back(patrick);
     }
-
-    Entity plane = {};
-    plane.modelIndex = LoadModel(app, "Patrick/untitled.obj");
-    plane.worldMatrix = TransformWorldMatrix({ 0.0,0.0,0.0 }, {90,0,0}, vec3(1.0));
-    app->entities.push_back(plane);
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
@@ -445,12 +440,19 @@ void Init(App* app)
 
    // Load Default Plane  
 
-  /* Entity defaultElement = {};
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
-   defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., -3.8f , 0), vec3(90.f ,0.f ,0.f), vec3(500.f));
-   app->entities.push_back(defaultElement);*/
+   Entity defaultElement = {};
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
+   defaultElement.worldMatrix = TransformWorldMatrix(vec3(-1.f, 4.f , 2.0f), vec3(90.f ,0.f ,0.f), vec3(2.f));
+   app->entities.push_back(defaultElement);
 
+   Entity plane = {};
+   plane.modelIndex = LoadModel(app, "Patrick/untitled.obj");
 
+   plane.worldMatrix = TransformWorldMatrix({ 0.0,-3.8,0.0 }, { 0,0,0 }, vec3(20.0));
+   app->entities.push_back(plane);
+
+   plane.worldMatrix = TransformWorldMatrix({ 0.0, 0.0 ,-3.0 }, { 90,0,0 }, vec3(20.0));
+   app->entities.push_back(plane);
 }
 
 void Gui(App* app)
