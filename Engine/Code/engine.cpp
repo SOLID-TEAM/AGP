@@ -340,34 +340,6 @@ void Init(App* app)
     app->camera.position = { 0.f , 0.f , -10.f};
     app->camera.finalPitch = app->camera.finalYaw = app->camera.pitch = app->camera.yaw = 0.f;
 
-    // create some lights -----------------------------------------
-    // directional front from up
-    Light light = {};
-    light.color = vec3(0.6);
-    light.direction = { 0, -1, -2 };
-    light.type = LightType::LightType_Directional;
-    app->lights.push_back(light);
-    
-    
-    // directional back from up
-    //light.color = { 1.0, 1.0, 1.0 };
-    //light.direction = { 0, -1, 1 };
-    //app->lights.push_back(light);
-
-    // point lights
-    light.color = { 0.0, 0.0, 1.0 };
-    light.position = { 0.0, 1.0, -2.0 };
-    light.type = LightType::LightType_Point;
-    app->lights.push_back(light);
-
-    light.color = { 1.0, 1.0, 0.0 };
-    light.position = { -6.0, 1.0, -2.0 };
-    app->lights.push_back(light);
-
-    light.color = { .0, 1.0, 0.0 };
-    light.position = { 6.0, 1.0, -2.0 };
-    app->lights.push_back(light);
-
     // ------------------------------------------------------------
 
     // Geometry
@@ -533,41 +505,105 @@ void Init(App* app)
 
    // Default Scene
 
-   Entity defaultElement = {};
-
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cone];
-
-   defaultElement.worldMatrix = TransformWorldMatrix(vec3(7.f, 4.f , 0), vec3(0.f ,0.f ,0.f), vec3(4.f));
-   app->entities.push_back(defaultElement);
-
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
-
-   defaultElement.worldMatrix = TransformWorldMatrix({ 0.0,-3.8,0.0 }, { 0,0,0 }, vec3(20.0));
-   app->entities.push_back(defaultElement);
-
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Torus];
-
-   defaultElement.worldMatrix = TransformWorldMatrix({ 0.0,3.8,0.0 }, { 0,0,0 }, vec3(20.0));
-   app->entities.push_back(defaultElement);
-
-
-
-
-
-
-
-
-   vec3 patrickPositions[] = { {  0.0, 0.0, 0.0 },
-                               {  6.0, 0.0, 0.0 },
-                               { -6.0, 0.0, 0.0 } };
-   Entity patrick = {};
-   patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
-   for (int i = 0; i < ARRAY_COUNT(patrickPositions); ++i)
+   // Models
    {
-       patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
-       app->entities.push_back(patrick);
-   }
+       Entity defaultElement = {};
 
+       defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
+
+       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,-3.8f,0.f }, { 0,0,0 }, vec3(20.0));
+       app->entities.push_back(defaultElement);
+
+       defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cone];
+
+       defaultElement.worldMatrix = TransformWorldMatrix(vec3(7.f, 4.f, 2.f), vec3(-30.f, 0.f, 30.f), vec3(2.f));
+       app->entities.push_back(defaultElement);
+
+       defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Torus];
+
+       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,3, 6.f }, { 30,30,30 }, vec3(2.f));
+       app->entities.push_back(defaultElement);
+
+       defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cube];
+
+       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,3.8,-5.f }, { 30,-30,30 }, vec3(2.f));
+       app->entities.push_back(defaultElement);
+
+       defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
+
+       defaultElement.worldMatrix = TransformWorldMatrix({ -7.f,0.5 ,7.f }, { 30,-30,30 }, vec3(2.f));
+       app->entities.push_back(defaultElement);
+
+       defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Suzanne];
+
+       defaultElement.worldMatrix = TransformWorldMatrix({ -5.f,3.8, 10.f }, { 30,-30,30 }, vec3(2.f));
+       app->entities.push_back(defaultElement);
+
+
+       Entity patrick = {};
+       patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
+
+       patrick.worldMatrix = TransformWorldMatrix(vec3(0, 0., 5.), vec3(0.f), vec3(1.0));
+       app->entities.push_back(patrick);
+
+       patrick.worldMatrix = TransformWorldMatrix(vec3(6, 0., 10.), vec3(0.f, 30, 0), vec3(1.0));
+       app->entities.push_back(patrick);
+
+       patrick.worldMatrix = TransformWorldMatrix(vec3(-6, 0. ,0.), vec3(30.f, -180, 0), vec3(1.0));
+       app->entities.push_back(patrick);
+
+
+       patrick.worldMatrix = TransformWorldMatrix(vec3(-6, 0., 10.), vec3(30.f, -180, 0), vec3(0.5));
+       app->entities.push_back(patrick);
+
+
+   }
+   // Lights
+   {
+       vec3 colorRed =    vec3(1.0, 0.0, 0.0 );
+       vec3 colorGreen =  vec3(0.0, 1.0, 0.0 );
+       vec3 colorBlue =   vec3(0.0, 0.0, 1.0 );
+       vec3 colorYellow = vec3(1.0, 1.0, 0.0 ) * 0.5f;
+       vec3 colorWhite =  vec3(1.0, 1.0, 1.0 );
+       vec3 colorPurple =  vec3(1.0, 0.0, 1.0 ) * 0.5f;
+       vec3 colorOrange =  vec3(1.0, 0.6, 0.0 ) * 0.5f;
+
+       Light light = {};
+
+       // Directional Lights
+       light.type = LightType::LightType_Directional;
+       light.color = vec3(0.6);
+       light.direction = { 0, -1, -2 };
+       app->lights.push_back(light);
+
+       // point lights
+
+       light.type = LightType::LightType_Point;
+
+       light.color = colorBlue;
+       light.position = { 0.0, 3.0, -2.0 };
+       app->lights.push_back(light);
+
+       light.color = colorRed;
+       light.position = { -6.0, 3.0, -2.0 };
+       app->lights.push_back(light);
+
+       light.color = colorGreen;
+       light.position = { 6.0, 3.0, -2.0 };
+       app->lights.push_back(light);
+
+       light.color = colorYellow ;
+       light.position = { 6.0, 3.0, -10.0 };
+       app->lights.push_back(light);
+
+       light.color = colorPurple;
+       light.position = { 0.0, 3.0, -10.0 };
+       app->lights.push_back(light);
+
+       light.color = colorOrange;
+       light.position = { -6.0, 3.0, -10.0 };
+       app->lights.push_back(light);
+   }
 }
 
 void Gui(App* app)
@@ -852,7 +888,7 @@ void Render(App* app)
 
                             glEnable(GL_CULL_FACE); // render light effect only once
                             glCullFace(GL_FRONT);   // render the light volume if the camera is inside the sphere volume too 
-                            mat4 pWorldMatrix = TransformPositionScale(l.position, vec3(radius));
+                            mat4 pWorldMatrix = TransformPositionScale(-l.position, vec3(radius));
                             mat4 MVP = app->projection * app->view * pWorldMatrix;
                             glUniform1i(lightIdxLocation, i);
                             glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
