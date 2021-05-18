@@ -337,7 +337,7 @@ void Init(App* app)
 
     // camera -----------------------------------------------------
 
-    app->camera.position = { -3.5f , .0f , -21.f};
+    app->camera.position = { -3.5f , .0f , -22.f};
     app->camera.finalPitch = app->camera.finalYaw = app->camera.pitch = app->camera.yaw = 0.f;
 
     app->camera.finalPitch = 25;
