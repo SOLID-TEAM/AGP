@@ -337,8 +337,13 @@ void Init(App* app)
 
     // camera -----------------------------------------------------
 
-    app->camera.position = { 0.f , 0.f , -10.f};
+    app->camera.position = { -3.5f , .0f , -21.f};
     app->camera.finalPitch = app->camera.finalYaw = app->camera.pitch = app->camera.yaw = 0.f;
+
+    app->camera.finalPitch = 25;
+    app->camera.finalYaw = -0.22;
+    app->camera.pitch = 25;
+    app->camera.yaw = -0.22;
 
     // ------------------------------------------------------------
 
@@ -638,9 +643,9 @@ void Gui(App* app)
         ImGui::End();
     }
 
-    ImGui::Begin("RenderTest");
+    /*ImGui::Begin("RenderTest");
     ImGui::Image((ImTextureID)app->gFinalPass, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
-    ImGui::End();
+    ImGui::End();*/
 }
 
 void Update(App* app)
