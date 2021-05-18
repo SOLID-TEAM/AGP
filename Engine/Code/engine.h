@@ -179,6 +179,9 @@ enum class DefaultModelType : int
     Sphere = 0,
     Cube,
     Plane,
+    Torus,
+    Cone,
+    Suzanne,
     Max,
 };
 
@@ -280,7 +283,6 @@ struct App
     mat4 projection;
 
     std::vector<Entity> entities;
-    u32 sphereEntityIdx;
 
     Camera camera;
 };

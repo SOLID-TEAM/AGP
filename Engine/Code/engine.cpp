@@ -433,18 +433,6 @@ void Init(App* app)
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
     FillInputVertexShaderLayout(texturedMeshProgram);*/
 
-    // patrick ------------------------------------------------------
-    vec3 patrickPositions[] = { {  0.0, 0.0, 0.0 }, 
-                                {  6.0, 0.0, 0.0 },
-                                { -6.0, 0.0, 0.0 } };
-    Entity patrick = {};
-    patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
-    for (int i = 0; i < ARRAY_COUNT(patrickPositions); ++i)
-    {
-        patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
-        app->entities.push_back(patrick);
-    }
-
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
@@ -536,31 +524,50 @@ void Init(App* app)
 
    // Load Default Models
 
-   for (int i = 0; i < (int)DefaultModelType::Max; ++i)
-   {
-       app->defaultModelsId[i] = LoadDefaultModel( (DefaultModelType)i, app);
-   }
+   app->defaultModelsId[(int)DefaultModelType::Sphere] = LoadDefaultModel(DefaultModelType::Sphere, app);
+   app->defaultModelsId[(int)DefaultModelType::Plane] = LoadModel(app, "Plane/plane.obj");
+   app->defaultModelsId[(int)DefaultModelType::Cube] = LoadModel(app, "Cube/cube.obj");
+   app->defaultModelsId[(int)DefaultModelType::Torus] = LoadModel(app, "Torus/torus.obj");
+   app->defaultModelsId[(int)DefaultModelType::Cone] = LoadModel(app, "Cone/cone.obj");
+   app->defaultModelsId[(int)DefaultModelType::Suzanne] = LoadModel(app, "Suzanne/suzanne.obj");
 
-   // Load Default Plane  
+   // Default Scene
 
    Entity defaultElement = {};
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
-   defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., 4.f , 0), vec3(0.f ,0.f ,0.f), vec3(1.f));
+
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cone];
+
+   defaultElement.worldMatrix = TransformWorldMatrix(vec3(7.f, 4.f , 0), vec3(0.f ,0.f ,0.f), vec3(4.f));
    app->entities.push_back(defaultElement);
-   // save sphere index for later lighting pass point light needs
-   app->sphereEntityIdx = app->entities.size() - 1u;
+
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
+
+   defaultElement.worldMatrix = TransformWorldMatrix({ 0.0,-3.8,0.0 }, { 0,0,0 }, vec3(20.0));
+   app->entities.push_back(defaultElement);
+
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Torus];
+
+   defaultElement.worldMatrix = TransformWorldMatrix({ 0.0,3.8,0.0 }, { 0,0,0 }, vec3(20.0));
+   app->entities.push_back(defaultElement);
 
 
-   //Entity defaultElement = {};
-   //defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
-   //defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., -3.8f , 0), vec3(90.f ,0.f ,0.f), vec3(500.f));
-   //app->entities.push_back(defaultElement);
-   //app->sphereEntityIdx = app->entities.size() - 1u;
 
-   Entity plane = {};
-   plane.modelIndex = LoadModel(app, "Plane/plane.obj");
-   plane.worldMatrix = TransformWorldMatrix({ 0.0,-3.8,0.0 }, { 0,0,0 }, vec3(20.0));
-   app->entities.push_back(plane);
+
+
+
+
+
+   vec3 patrickPositions[] = { {  0.0, 0.0, 0.0 },
+                               {  6.0, 0.0, 0.0 },
+                               { -6.0, 0.0, 0.0 } };
+   Entity patrick = {};
+   patrick.modelIndex = LoadModel(app, "Patrick/Patrick.obj");
+   for (int i = 0; i < ARRAY_COUNT(patrickPositions); ++i)
+   {
+       patrick.worldMatrix = TransformPositionScale(patrickPositions[i], vec3(1.0));
+       app->entities.push_back(patrick);
+   }
+
 }
 
 void Gui(App* app)
@@ -851,8 +858,8 @@ void Render(App* app)
                             glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
 
                             // render sphere with scale fitting the light volume radius
-                            Entity& s = app->entities[app->sphereEntityIdx];
-                            Model& model = app->models[s.modelIndex];
+               
+                            Model& model = app->models[app->defaultModelsId[(int)DefaultModelType::Sphere]];
                             Mesh& mesh = app->meshes[model.meshIdx];
 
                             //glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, s.localParamsOffset, s.localParamsSize);
