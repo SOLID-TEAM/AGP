@@ -266,7 +266,10 @@ struct App
     GLuint gAlbedoSpec;
     GLuint gDepthGray;
     GLuint depthAttachmentHandle;
+    
     GLuint gFinalPass;
+    GLuint finalPassBuffer;
+    GLuint finalPassDepth;
 
     GLuint selectedAttachment; // imgui combobox
 

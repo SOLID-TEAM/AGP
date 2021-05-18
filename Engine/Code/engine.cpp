@@ -244,17 +244,6 @@ void Init(App* app)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    // final lighted and shaded scene texture
-    glGenTextures(1, &app->gFinalPass);
-    glBindTexture(GL_TEXTURE_2D, app->gFinalPass);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
     // grayScale depth for combobox purposes
     glGenTextures(1, &app->gDepthGray);
     glBindTexture(GL_TEXTURE_2D, app->gDepthGray);
@@ -307,6 +296,43 @@ void Init(App* app)
     /*GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);*/
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   
+
+    // final buffer to blit the resulted lighting texture
+    // final lighted and shaded scene texture
+    glGenTextures(1, &app->gFinalPass);
+    glBindTexture(GL_TEXTURE_2D, app->gFinalPass);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // depth buffer
+    glGenTextures(1, &app->finalPassDepth);
+    glBindTexture(GL_TEXTURE_2D, app->finalPassDepth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenFramebuffers(1, &app->finalPassBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->finalPassBuffer);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->gFinalPass, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->finalPassDepth, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        ELOG("error creating final framebuffer pass");
+    }
+
     app->selectedAttachment = app->gFinalPass;
 
     // camera -----------------------------------------------------
@@ -549,9 +575,9 @@ void Gui(App* app)
         ImGui::End();
     }
 
-    /*ImGui::Begin("RenderTest");
-    ImGui::Image((ImTextureID)app->gNormal, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
-    ImGui::End();*/
+    ImGui::Begin("RenderTest");
+    ImGui::Image((ImTextureID)app->gFinalPass, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
+    ImGui::End();
 }
 
 void Update(App* app)
@@ -734,7 +760,7 @@ void Render(App* app)
                     glBlendEquation(GL_FUNC_ADD);
                     glBlendFunc(GL_ONE, GL_ONE);
 
-                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app->finalPassBuffer);
                     //glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
                     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -780,6 +806,8 @@ void Render(App* app)
                         }
                     }
 
+                    
+
                     glUseProgram(0);
 
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -789,6 +817,7 @@ void Render(App* app)
                 // render screen quad with selected texture from combobox
                 {
                     glDepthMask(GL_TRUE);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                     //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                     //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
