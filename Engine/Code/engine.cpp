@@ -398,8 +398,8 @@ void Init(App* app)
     //app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
 
     //// Texture initialization
-    app->diceTexIdx = LoadTexture2D(app, "dice.png");
-    app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
+    //app->diceTexIdx = LoadTexture2D(app, "dice.png");
+    app->whiteTexIdx = LoadTexture2D(app, "color_white.png"); // TODO: fix texture location
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
@@ -542,12 +542,18 @@ void Init(App* app)
    }
 
    // Load Default Plane  
-
    Entity defaultElement = {};
-   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
-   defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., -3.8f , 0), vec3(90.f ,0.f ,0.f), vec3(500.f));
+   defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
+   defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., 4.f , 0), vec3(0.f ,0.f ,0.f), vec3(1.f));
    app->entities.push_back(defaultElement);
+   // save sphere index for later lighting pass point light needs
    app->sphereEntityIdx = app->entities.size() - 1u;
+
+   // load default plane
+   Entity plane = {};
+   plane.modelIndex = LoadModel(app, "Plane/plane.obj");
+   plane.worldMatrix = TransformWorldMatrix({ 0.0,-3.8,0.0 }, { 0,0,0 }, vec3(20.0));
+   app->entities.push_back(plane);
 
 }
 
