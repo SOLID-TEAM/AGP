@@ -212,6 +212,9 @@ struct App
     // program indices
     u32 texturedGeometryProgramIdx;
     u32 texturedMeshProgramIdx;
+    u32 geometryPassProgramIdx;
+    u32 dirLightPassProgramIdx;
+    u32 pointLightPassProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -230,6 +233,10 @@ struct App
 
     // Location of the texture uniform in the textured quad shader
     GLuint programUniformTexture;
+    // location on samplers from lighting pass program
+    //GLuint gPosSampler;
+    //GLuint gNormSampler;
+    //GLuint gAlbeSampler;
     // default texture uniform for default model
     GLuint texturedMeshProgram_uTexture;
         
@@ -254,9 +261,18 @@ struct App
     u32 globalParamsSize;
 
     // framebuffer object and attachments
-    GLuint fbo;
-    GLuint colorAttachmentHandle;
+    GLuint gBuffer;
+    GLuint gPosition;
+    GLuint gNormal;
+    GLuint gAlbedoSpec;
+    GLuint gDepthGray;
     GLuint depthAttachmentHandle;
+    
+    GLuint gFinalPass;
+    GLuint finalPassBuffer;
+    GLuint finalPassDepth;
+
+    GLuint selectedAttachment; // imgui combobox
 
     //glm::mat4 worldMatrix;
     //glm::mat4 worldViewProjectionMatrix;
@@ -264,6 +280,7 @@ struct App
     mat4 projection;
 
     std::vector<Entity> entities;
+    u32 sphereEntityIdx;
 
     Camera camera;
 };
@@ -276,6 +293,7 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
+void RenderScreenQuad(u32 programIdx, App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
