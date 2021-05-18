@@ -354,7 +354,7 @@ void Init(App* app)
 
     // point lights
     light.color = { 0.0, 0.0, 1.0 };
-    light.position = { 0.0, 0.0, 6.0 };
+    light.position = { 0.0, 0.0, 3.0 };
     light.type = LightType::LightType_Point;
     app->lights.push_back(light);
 
@@ -408,9 +408,13 @@ void Init(App* app)
 
     // load lighting second pass program ----------------------------
     // independent program for directionals and point lights
-    app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHT_PASS_VOLUMES");
-    Program& dirLightPassProgram = app->programs[app->lightingPassProgramIdx];
+    app->dirLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "DIR_LIGHT_PASS_VOLUMES");
+    Program& dirLightPassProgram = app->programs[app->dirLightPassProgramIdx];
     FillInputVertexShaderLayout(dirLightPassProgram);
+
+    app->pointLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "POINT_LIGHT_PASS_VOLUMES");
+    Program& pointLightPassProgram = app->programs[app->pointLightPassProgramIdx];
+    FillInputVertexShaderLayout(pointLightPassProgram);
 
    /* app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHTING_PASS");
     Program& lightingProgram = app->programs[app->lightingPassProgramIdx];
@@ -540,6 +544,7 @@ void Init(App* app)
    defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
    defaultElement.worldMatrix = TransformPositionScale(vec3(0., 5., -5.), vec3(2.0));
    app->entities.push_back(defaultElement);
+   app->sphereEntityIdx = app->entities.size() - 1u;
 
 }
 
@@ -787,27 +792,68 @@ void Render(App* app)
 
                     // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
                     //// setting uniforms sampler locations
-                    Program& prog = app->programs[app->lightingPassProgramIdx];
-                    glUseProgram(prog.handle);
+                   
 
                     for (int i = 0; i < app->lights.size(); ++i)
                     {
+
                         Light& l = app->lights[i];
-                        GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
-                        glUniform1i(lightIdxLocation, i);
+                       
 
                         if (l.type == LightType::LightType_Directional)
                         {
-                            RenderScreenQuad(app->lightingPassProgramIdx, app);
+                            Program& prog = app->programs[app->dirLightPassProgramIdx];
+                            glUseProgram(prog.handle);
+
+                            GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
+                            glUniform1i(lightIdxLocation, i);
+
+                            RenderScreenQuad(app->dirLightPassProgramIdx, app);
+
+                            glUseProgram(0);
                         }
                         else
                         {
+                            Program& prog = app->programs[app->pointLightPassProgramIdx];
+                            glUseProgram(prog.handle);
+
+                            GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
+                            GLuint worldViewProjectionLocation = glGetUniformLocation(prog.handle, "worldViewProjection");
+                            mat4 pWorldMatrix = TransformPositionScale(l.position, vec3(1));
+                            mat4 MVP = app->projection * app->view * pWorldMatrix;
+                            glUniform1i(lightIdxLocation, i);
+                            glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
+
                             // render sphere with scale fitting the light volume radius
+                            Entity& s = app->entities[app->sphereEntityIdx];
+                            Model& model = app->models[s.modelIndex];
+                            Mesh& mesh = app->meshes[model.meshIdx];
+
+                            //glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, s.localParamsOffset, s.localParamsSize);
+                                                        
+                            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                            {
+                                GLuint vao = FindVAO(mesh, i, prog);
+                                glBindVertexArray(vao);
+
+                               // u32 submeshMaterilIdx = model.materialIdx[i];
+                               // Material& submeshMaterial = app->materials[submeshMaterilIdx];
+
+                                //glActiveTexture(GL_TEXTURE0);
+                                //glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                                //glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                                Submesh& submesh = mesh.submeshes[i];
+                                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                            }
+
+                            glUseProgram(0);
+
                         }
                     }
 
                     
-
+                    glBindVertexArray(0);
                     glUseProgram(0);
 
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);

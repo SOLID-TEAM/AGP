@@ -213,7 +213,8 @@ struct App
     u32 texturedGeometryProgramIdx;
     u32 texturedMeshProgramIdx;
     u32 geometryPassProgramIdx;
-    u32 lightingPassProgramIdx;
+    u32 dirLightPassProgramIdx;
+    u32 pointLightPassProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -279,6 +280,7 @@ struct App
     mat4 projection;
 
     std::vector<Entity> entities;
+    u32 sphereEntityIdx;
 
     Camera camera;
 };
