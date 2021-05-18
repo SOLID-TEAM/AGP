@@ -755,7 +755,7 @@ void Render(App* app)
                 glBindVertexArray(0);
                 glUseProgram(0);
 
-                //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 glDepthMask(GL_FALSE);
                 glDisable(GL_DEPTH_TEST);
 
@@ -817,7 +817,18 @@ void Render(App* app)
                         }
                         else
                         {
-                            mat4 pWorldMatrix = TransformPositionScale(l.position, vec3(5));
+                            // this values must match with shader calculations
+                            // for now, we have all light points attenuation values hardcoded on shader with this below values
+                            float constant = 1.0;
+                            float linear = 0.09;
+                            float quadratic = 0.032;
+                            float lightMax = std::fmaxf(std::fmaxf(l.color.r, l.color.g), l.color.b);
+                            float radius = (-linear + std::sqrtf(linear * linear - 4 * quadratic * (constant - (256.0 / 5.0) * lightMax)))
+                                / (2 * quadratic);
+
+                            glEnable(GL_CULL_FACE); // render light effect only once
+                            glCullFace(GL_FRONT);   // render the light volume if the camera is inside the sphere volume too 
+                            mat4 pWorldMatrix = TransformPositionScale(l.position, vec3(radius));
                             mat4 MVP = app->projection * app->view * pWorldMatrix;
                             glUniform1i(lightIdxLocation, i);
                             glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
@@ -844,6 +855,8 @@ void Render(App* app)
                                 Submesh& submesh = mesh.submeshes[i];
                                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                             }
+
+                            glDisable(GL_CULL_FACE);
 
                         }
                     }
