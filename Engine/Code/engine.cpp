@@ -511,7 +511,10 @@ void Init(App* app)
 
        defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
 
-       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,-3.8f,0.f }, { 0,0,0 }, vec3(20.0));
+       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,-3.8f,0.f }, { 0,0,0 }, vec3(30.0));
+       app->entities.push_back(defaultElement);
+
+       defaultElement.worldMatrix = TransformWorldMatrix({- 10.f,-3.8f,3.f }, { 0, 0,-90 }, vec3(1, 2, 1));
        app->entities.push_back(defaultElement);
 
        defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cone];
@@ -521,7 +524,7 @@ void Init(App* app)
 
        defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Torus];
 
-       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,3, 6.f }, { 30,30,30 }, vec3(2.f));
+       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,3, 5.f }, { 0,0,0 }, vec3(1.f));
        app->entities.push_back(defaultElement);
 
        defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cube];
@@ -553,7 +556,7 @@ void Init(App* app)
        app->entities.push_back(patrick);
 
 
-       patrick.worldMatrix = TransformWorldMatrix(vec3(-6, 0., 10.), vec3(30.f, -180, 0), vec3(0.5));
+       patrick.worldMatrix = TransformWorldMatrix(vec3(6, 0., 0.), vec3(30.f, -60, 0), vec3(0.5));
        app->entities.push_back(patrick);
 
 
@@ -602,6 +605,31 @@ void Init(App* app)
 
        light.color = colorOrange;
        light.position = { -6.0, 3.0, -10.0 };
+       app->lights.push_back(light);
+
+
+       light.color = colorBlue;
+       light.position = { 0.0, -6.0, -2.0 };
+       app->lights.push_back(light);
+
+       light.color = colorRed;
+       light.position = { -6.0,-6.0, -2.0 };
+       app->lights.push_back(light);
+
+       light.color = colorGreen;
+       light.position = { 6.0, -6.0, -2.0 };
+       app->lights.push_back(light);
+
+       light.color = colorYellow;
+       light.position = { 6.0, -6.0, -10.0 };
+       app->lights.push_back(light);
+
+       light.color = colorPurple;
+       light.position = { 0.0,-6.0, -10.0 };
+       app->lights.push_back(light);
+
+       light.color = colorOrange;
+       light.position = { -6.0, -6.0, -10.0 };
        app->lights.push_back(light);
    }
 }
