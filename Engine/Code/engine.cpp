@@ -244,6 +244,17 @@ void Init(App* app)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    // final lighted and shaded scene texture
+    glGenTextures(1, &app->gFinalPass);
+    glBindTexture(GL_TEXTURE_2D, app->gFinalPass);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     // grayScale depth for combobox purposes
     glGenTextures(1, &app->gDepthGray);
     glBindTexture(GL_TEXTURE_2D, app->gDepthGray);
@@ -273,6 +284,7 @@ void Init(App* app)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->gNormal, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->gAlbedoSpec, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->gDepthGray, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->gFinalPass, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,  app->depthAttachmentHandle, 0);
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -295,7 +307,7 @@ void Init(App* app)
     /*GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);*/
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    app->selectedAttachment = app->gAlbedoSpec;
+    app->selectedAttachment = app->gFinalPass;
 
     // camera -----------------------------------------------------
 
@@ -363,10 +375,19 @@ void Init(App* app)
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
 
-    // load geometry first pass program ----------------------------
+    // load geometry first pass program -----------------------------
     app->geometryPassProgramIdx = LoadProgram(app, "shaders.glsl", "GEOMETRY_PASS");
     Program& p = app->programs[app->geometryPassProgramIdx];
     FillInputVertexShaderLayout(p);
+
+    // load lighting second pass program ----------------------------
+    app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHTING_PASS");
+    Program& lightingProgram = app->programs[app->lightingPassProgramIdx];
+    FillInputVertexShaderLayout(lightingProgram);
+    //glUseProgram(lightingProgram.handle);
+    //app->gPosSampler =  glGetUniformLocation(lightingProgram.handle, "positionTex");
+    //app->gNormSampler = glGetUniformLocation(lightingProgram.handle, "normalTex");
+    //app->gAlbeSampler = glGetUniformLocation(lightingProgram.handle, "albedoTex");
 
     // load program -------------------------------------------------
 
@@ -489,16 +510,15 @@ void Init(App* app)
    defaultElement.worldMatrix = TransformPositionScale(vec3(0., 5., -5.), vec3(2.0));
    app->entities.push_back(defaultElement);
 
-
 }
 
 void Gui(App* app)
 {
     ImGui::Begin("Info");
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
-    const char* items[] = { "position", "normals", "albedo", "depth", "depth_grayscale", "light pass", "etc"};
-    u32 attachments[] = { app->gPosition, app->gNormal, app->gAlbedoSpec, app->depthAttachmentHandle ,app->gDepthGray};
-    static const char* item_current = items[2];            // Here our selection is a single pointer stored outside the object.
+    const char* items[] = { "position", "normals", "albedo", "depth", "depth_grayscale", "final pass", "etc"};
+    u32 attachments[] = { app->gPosition, app->gNormal, app->gAlbedoSpec, app->depthAttachmentHandle ,app->gDepthGray, app->gFinalPass};
+    static const char* item_current = items[5];            // Here our selection is a single pointer stored outside the object.
     if (ImGui::BeginCombo("Texture", item_current)) // The second parameter is the label previewed before opening the combo.
     {
         for (int n = 0; n < IM_ARRAYSIZE(attachments); n++)
@@ -650,6 +670,8 @@ void Render(App* app)
                 glBindVertexArray(0);
                 glUseProgram(0);*/
 
+                // Geometry pass -------------------------------------------------------------------
+
                 glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
                 GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
                 glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
@@ -698,32 +720,53 @@ void Render(App* app)
 
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-                // render screen quad with selected texture from combobox
+                // lighting pass ---------------------------------------------------------
                 {
-                    Mesh& mesh = app->meshes[app->texturedQuadMeshIdx];
-                    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
+                    GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT4 };
+                    glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
+                    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-                    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
-                    glUseProgram(programTexturedGeometry.handle);
-
-                    GLuint vao = FindVAO(mesh, 0, programTexturedGeometry);
-                    glBindVertexArray(vao);
-
-                    /*glEnable(GL_BLEND);
-                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
-
-                    //glUniform1i(app->programUniformTexture, 0);
                     glActiveTexture(GL_TEXTURE0);
-                    GLuint textureHandle = app->selectedAttachment;
-                    glBindTexture(GL_TEXTURE_2D, textureHandle);
+                    
+                    glBindTexture(GL_TEXTURE_2D, app->gPosition);
 
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, app->gNormal);
 
-                    glBindVertexArray(0);
-                    glUseProgram(0); 
+                    glActiveTexture(GL_TEXTURE2);
+                    glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
+
+                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
+                    // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
+                    //// setting uniforms sampler locations
+                    //Program& prog = app->programs[app->lightingPassProgramIdx];
+                    //glUseProgram(prog.handle);
+
+                    //glUniform1i(0, 0);
+                    //glUniform1i(0, 1);
+                    //glUniform1i(0, 2);
+                    
+                    RenderScreenQuad(app->lightingPassProgramIdx, app);
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                   
+                }
+
+                // render screen quad with selected texture from combobox
+                {
+                    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, app->selectedAttachment);
+
+                    RenderScreenQuad(app->texturedGeometryProgramIdx, app);
                 }
 
             }
@@ -732,6 +775,28 @@ void Render(App* app)
 
         default:;
     }
+}
+
+void RenderScreenQuad(u32 programIdx, App* app)
+{
+    Mesh& mesh = app->meshes[app->texturedQuadMeshIdx];
+
+    Program& p = app->programs[programIdx];
+    glUseProgram(p.handle);
+
+    GLuint vao = FindVAO(mesh, 0, p);
+    glBindVertexArray(vao);
+
+    /*glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
+
+    //glUniform1i(app->programUniformTexture, 0);
+
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
 }
 
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)

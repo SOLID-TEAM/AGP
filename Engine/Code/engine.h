@@ -213,6 +213,7 @@ struct App
     u32 texturedGeometryProgramIdx;
     u32 texturedMeshProgramIdx;
     u32 geometryPassProgramIdx;
+    u32 lightingPassProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -231,6 +232,10 @@ struct App
 
     // Location of the texture uniform in the textured quad shader
     GLuint programUniformTexture;
+    // location on samplers from lighting pass program
+    //GLuint gPosSampler;
+    //GLuint gNormSampler;
+    //GLuint gAlbeSampler;
     // default texture uniform for default model
     GLuint texturedMeshProgram_uTexture;
         
@@ -261,6 +266,7 @@ struct App
     GLuint gAlbedoSpec;
     GLuint gDepthGray;
     GLuint depthAttachmentHandle;
+    GLuint gFinalPass;
 
     GLuint selectedAttachment; // imgui combobox
 
@@ -282,6 +288,7 @@ void Gui(App* app);
 void Update(App* app);
 
 void Render(App* app);
+void RenderScreenQuad(u32 programIdx, App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
