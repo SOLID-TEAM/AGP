@@ -157,7 +157,7 @@ void main()
 		ambient = lightContribution * ambientFactor * lightColor;
 
 		// specular
-		vec3 r = reflect(lightDir, uNormal);
+		vec3 r = reflect(-lightDir, uNormal);
 		float specComponent = pow(max(dot(normalize(vViewDir), r), 0.0), shininess);
 		specular += specComponent * specFactor * lightColor;
 	}
@@ -389,7 +389,7 @@ void main()
 			ambient += lightContribution * ambientFactor * lightColor;
 
 			// specular
-			vec3 r = reflect(lightDir, uNormal);
+			vec3 r = reflect(-lightDir, uNormal);
 			float specComponent = pow(max(dot(normalize(vViewDir), r), 0.0), shininess);
 			specular += specComponent * specFactor * lightColor; 
 		}

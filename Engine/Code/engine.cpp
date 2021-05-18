@@ -343,29 +343,29 @@ void Init(App* app)
     // create some lights -----------------------------------------
     // directional front from up
     Light light = {};
-    light.color = { 1.0, 1.0, 1.0 };
-    light.direction = { 0, -1, -1 };
+    light.color = vec3(0.6);
+    light.direction = { 0, -1, -2 };
     light.type = LightType::LightType_Directional;
     app->lights.push_back(light);
     
     
     // directional back from up
-    light.color = { 1.0, 1.0, 1.0 };
-    light.direction = { 0, -1, 1 };
-    app->lights.push_back(light);
+    //light.color = { 1.0, 1.0, 1.0 };
+    //light.direction = { 0, -1, 1 };
+    //app->lights.push_back(light);
 
     // point lights
     light.color = { 0.0, 0.0, 1.0 };
-    light.position = { 0.0, 0.0, 3.0 };
+    light.position = { 0.0, 1.0, -2.0 };
     light.type = LightType::LightType_Point;
     app->lights.push_back(light);
 
-    light.color = { 1.0, 0.0, 0.0 };
-    light.position = { -6.0, 0.0, 3.0 };
+    light.color = { 1.0, 1.0, 0.0 };
+    light.position = { -6.0, 1.0, -2.0 };
     app->lights.push_back(light);
 
-    light.color = { 0.0, 1.0, 0.0 };
-    light.position = { 6.0, 0.0, 3.0 };
+    light.color = { .0, 1.0, 0.0 };
+    light.position = { 6.0, 1.0, -2.0 };
     app->lights.push_back(light);
 
     // ------------------------------------------------------------
@@ -542,6 +542,7 @@ void Init(App* app)
    }
 
    // Load Default Plane  
+
    Entity defaultElement = {};
    defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Sphere];
    defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., 4.f , 0), vec3(0.f ,0.f ,0.f), vec3(1.f));
@@ -549,12 +550,17 @@ void Init(App* app)
    // save sphere index for later lighting pass point light needs
    app->sphereEntityIdx = app->entities.size() - 1u;
 
-   // load default plane
+
+   //Entity defaultElement = {};
+   //defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
+   //defaultElement.worldMatrix = TransformWorldMatrix(vec3(0., -3.8f , 0), vec3(90.f ,0.f ,0.f), vec3(500.f));
+   //app->entities.push_back(defaultElement);
+   //app->sphereEntityIdx = app->entities.size() - 1u;
+
    Entity plane = {};
    plane.modelIndex = LoadModel(app, "Plane/plane.obj");
    plane.worldMatrix = TransformWorldMatrix({ 0.0,-3.8,0.0 }, { 0,0,0 }, vec3(20.0));
    app->entities.push_back(plane);
-
 }
 
 void Gui(App* app)
@@ -632,7 +638,7 @@ void Update(App* app)
         {
             app->globalParamsOffset = app->cbuffer.head;
 
-            PushVec3(app->cbuffer, app->camera.position);
+            PushVec3(app->cbuffer, -app->camera.position);
             PushUInt(app->cbuffer, app->lights.size());
 
             for (u32 i = 0; i < app->lights.size(); ++i)
@@ -643,7 +649,7 @@ void Update(App* app)
                 PushUInt(app->cbuffer, l.type);
                 PushVec3(app->cbuffer, l.color);
                 PushVec3(app->cbuffer, l.direction);
-                PushVec3(app->cbuffer, l.position);
+                PushVec3(app->cbuffer,- l.position);
             }
 
             app->globalParamsSize = app->cbuffer.head - app->globalParamsOffset;
