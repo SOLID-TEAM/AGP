@@ -408,13 +408,13 @@ void Init(App* app)
 
     // load lighting second pass program ----------------------------
     // independent program for directionals and point lights
-    app->dirLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "DIR_LIGHT_PASS_VOLUMES");
+    app->dirLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHT_PASS_VOLUMES");
     Program& dirLightPassProgram = app->programs[app->dirLightPassProgramIdx];
     FillInputVertexShaderLayout(dirLightPassProgram);
 
-    app->pointLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "POINT_LIGHT_PASS_VOLUMES");
+    /*app->pointLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "POINT_LIGHT_PASS_VOLUMES");
     Program& pointLightPassProgram = app->programs[app->pointLightPassProgramIdx];
-    FillInputVertexShaderLayout(pointLightPassProgram);
+    FillInputVertexShaderLayout(pointLightPassProgram);*/
 
    /* app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHTING_PASS");
     Program& lightingProgram = app->programs[app->lightingPassProgramIdx];
@@ -426,9 +426,9 @@ void Init(App* app)
 
     // load program -------------------------------------------------
 
-    app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
+   /* app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
     Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
-    FillInputVertexShaderLayout(texturedMeshProgram);
+    FillInputVertexShaderLayout(texturedMeshProgram);*/
 
     // patrick ------------------------------------------------------
     vec3 patrickPositions[] = { {  0.0, 0.0, 0.0 }, 
@@ -792,6 +792,12 @@ void Render(App* app)
 
                     // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
                     //// setting uniforms sampler locations
+
+                    Program& prog = app->programs[app->dirLightPassProgramIdx];
+                    glUseProgram(prog.handle);
+
+                    GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
+                    GLuint worldViewProjectionLocation = glGetUniformLocation(prog.handle, "WVP");
                    
 
                     for (int i = 0; i < app->lights.size(); ++i)
@@ -802,24 +808,16 @@ void Render(App* app)
 
                         if (l.type == LightType::LightType_Directional)
                         {
-                            Program& prog = app->programs[app->dirLightPassProgramIdx];
-                            glUseProgram(prog.handle);
-
-                            GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
+                            mat4 MVP = mat4(1.0);
                             glUniform1i(lightIdxLocation, i);
+                            glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
 
                             RenderScreenQuad(app->dirLightPassProgramIdx, app);
 
-                            glUseProgram(0);
                         }
                         else
                         {
-                            Program& prog = app->programs[app->pointLightPassProgramIdx];
-                            glUseProgram(prog.handle);
-
-                            GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
-                            GLuint worldViewProjectionLocation = glGetUniformLocation(prog.handle, "worldViewProjection");
-                            mat4 pWorldMatrix = TransformPositionScale(l.position, vec3(1));
+                            mat4 pWorldMatrix = TransformPositionScale(l.position, vec3(5));
                             mat4 MVP = app->projection * app->view * pWorldMatrix;
                             glUniform1i(lightIdxLocation, i);
                             glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
@@ -846,8 +844,6 @@ void Render(App* app)
                                 Submesh& submesh = mesh.submeshes[i];
                                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                             }
-
-                            glUseProgram(0);
 
                         }
                     }

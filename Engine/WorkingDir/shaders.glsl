@@ -88,22 +88,22 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
-#ifdef DIR_LIGHT_PASS_VOLUMES
+#ifdef LIGHT_PASS_VOLUMES
 
 #if defined(VERTEX)
 
 layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec2 aTexCoord;
+//layout(location = 1) in vec2 aTexCoord;
 
 
-
-out vec2 vTexCoord;
+//out vec2 vTexCoord;
+uniform mat4 WVP;
 
 
 void main()
 {
-	vTexCoord = aTexCoord;
-	gl_Position = vec4(aPosition, 1.0);
+	//vTexCoord = aTexCoord;
+	gl_Position = WVP * vec4(aPosition, 1.0);
 }
 
 #elif defined(FRAGMENT)
@@ -116,7 +116,7 @@ struct Light
 	vec3		 position;
 };
 
-in vec2 vTexCoord;
+//in vec2 vTexCoord;
 
 layout(location = 0) out vec4 lightingPassTex;
 
@@ -135,6 +135,7 @@ layout(binding = 2) uniform sampler2D gAlbedoSpec;
 
 void main()
 {
+	vec2 vTexCoord = gl_FragCoord.xy / vec2(800, 600);
     vec3 vPosition = texture(gPosition, vTexCoord).rgb;
 	vec3 uNormal = texture(gNormal, vTexCoord).rgb;
 	vec3 vViewDir = normalize(uCameraPosition - vPosition);
@@ -252,8 +253,9 @@ layout(binding = 2) uniform sampler2D gAlbedoSpec;
 
 void main()
 {
-    vec3 vPosition = texture(gPosition, vTexCoord).rgb;
-	vec3 uNormal = texture(gNormal, vTexCoord).rgb;
+	vec2 texCoord = gl_FragCoord.xy / vec2(800,600);
+    vec3 vPosition = texture(gPosition, texCoord).rgb;
+	vec3 uNormal = texture(gNormal, texCoord).rgb;
 	vec3 vViewDir = normalize(uCameraPosition - vPosition);
 	vec3 diffuse, ambient, specular;
 
@@ -307,7 +309,7 @@ void main()
 		specular = s;
 	//}
 	
-	vec4 albedo = texture(gAlbedoSpec, vTexCoord);
+	vec4 albedo = texture(gAlbedoSpec, texCoord);
 	vec4 objColor = albedo * vec4(ambient, 1.0) + // ambient
 					albedo * vec4(diffuse, 1.0) + // diffuse
 					albedo * vec4(specular, 1.0); // specular
