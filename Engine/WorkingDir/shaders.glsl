@@ -88,6 +88,120 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
+#ifdef LIGHT_PASS_VOLUMES
+
+#if defined(VERTEX)
+
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aTexCoord;
+
+out vec2 vTexCoord;
+
+void main()
+{
+	vTexCoord = aTexCoord;
+	gl_Position = vec4(aPosition, 1.0);
+}
+
+#elif defined(FRAGMENT)
+
+struct Light
+{
+	unsigned int type;
+	vec3		 color;
+	vec3		 direction;
+	vec3		 position;
+};
+
+in vec2 vTexCoord;
+
+layout(location = 0) out vec4 lightingPassTex;
+
+layout(binding = 0, std140) uniform GlobalParams
+{
+	vec3 uCameraPosition;
+	unsigned int uLightCount;
+	Light uLight[16];
+};
+
+uniform int lightIdx;
+
+layout(binding = 0) uniform sampler2D gPosition;
+layout(binding = 1) uniform sampler2D gNormal;
+layout(binding = 2) uniform sampler2D gAlbedoSpec;
+
+void main()
+{
+    vec3 vPosition = texture(gPosition, vTexCoord).rgb;
+	vec3 uNormal = texture(gNormal, vTexCoord).rgb;
+	vec3 vViewDir = normalize(uCameraPosition - vPosition);
+	vec3 diffuse, ambient, specular;
+
+	float ambientFactor = 0.2;
+	float diffuseFactor = 0.8;
+	float shininess = 20.0;
+	float specFactor = 0.7;
+
+	vec3 lightColor = uLight[lightIdx].color;
+
+	if(uLight[lightIdx].type == 0u) // directional
+	{
+		vec3 lightDir = normalize(-uLight[lightIdx].direction);
+		float lightContribution = max(dot(uNormal, lightDir), 0.0);
+
+		diffuse = lightContribution * diffuseFactor * lightColor;
+		ambient = lightContribution * ambientFactor * lightColor;
+
+		// specular
+		vec3 r = reflect(lightDir, uNormal);
+		float specComponent = pow(max(dot(normalize(vViewDir), r), 0.0), shininess);
+		specular += specComponent * specFactor * lightColor;
+	}
+	else // point light
+	{
+		vec3 lightDir = normalize(uLight[lightIdx].position - vPosition);
+		float lightContribution = max(dot(uNormal, lightDir), 0.0);
+
+		vec3 d = lightContribution * diffuseFactor * lightColor;
+		vec3 a = lightContribution * ambientFactor * lightColor;
+
+		// specular
+		vec3 r = reflect(-lightDir, uNormal);
+		float specComponent = pow(max(dot(normalize(vViewDir), r), 0.0), shininess);
+
+		// attenuation
+		float constant = 1.0;
+		float linear = 0.09;
+		float quadratic = 0.032;
+		float dist = length(uLight[lightIdx].position - vPosition);
+		float attenuation = 1.0 / (constant + linear * dist +
+								       quadratic * (dist * dist));
+		vec3 s = specComponent * specFactor * lightColor;
+
+		a *= attenuation;
+		d *= attenuation;
+		s *= attenuation;
+
+		diffuse = d;
+		ambient = a;
+		specular = s;
+	}
+	
+	vec4 albedo = texture(gAlbedoSpec, vTexCoord);
+	vec4 objColor = albedo * vec4(ambient, 1.0) + // ambient
+					albedo * vec4(diffuse, 1.0) + // diffuse
+					albedo * vec4(specular, 1.0); // specular
+
+	lightingPassTex = objColor;//vec4(diffuse, 1.0);
+}
+
+
+#endif
+#endif
+
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
 #ifdef LIGHTING_PASS
 
 #if defined(VERTEX)

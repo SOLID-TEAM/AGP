@@ -381,9 +381,14 @@ void Init(App* app)
     FillInputVertexShaderLayout(p);
 
     // load lighting second pass program ----------------------------
-    app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHTING_PASS");
+    // independent program for directionals and point lights
+    app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHT_PASS_VOLUMES");
+    Program& dirLightPassProgram = app->programs[app->lightingPassProgramIdx];
+    FillInputVertexShaderLayout(dirLightPassProgram);
+
+   /* app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHTING_PASS");
     Program& lightingProgram = app->programs[app->lightingPassProgramIdx];
-    FillInputVertexShaderLayout(lightingProgram);
+    FillInputVertexShaderLayout(lightingProgram);*/
     //glUseProgram(lightingProgram.handle);
     //app->gPosSampler =  glGetUniformLocation(lightingProgram.handle, "positionTex");
     //app->gNormSampler = glGetUniformLocation(lightingProgram.handle, "normalTex");
@@ -676,6 +681,11 @@ void Render(App* app)
                 GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
                 glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
+                glEnable(GL_DEPTH_TEST);
+                glEnable(GL_BLEND);
+                glDepthMask(GL_TRUE);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
                 glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -683,10 +693,6 @@ void Render(App* app)
 
                 Program& texturedMeshProgram = app->programs[app->geometryPassProgramIdx/*app->texturedMeshProgramIdx*/];
                 glUseProgram(texturedMeshProgram.handle);
-
-                glEnable(GL_DEPTH_TEST);
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
                 glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
@@ -718,23 +724,31 @@ void Render(App* app)
                 glBindVertexArray(0);
                 glUseProgram(0);
 
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glDepthMask(GL_FALSE);
+                glDisable(GL_DEPTH_TEST);
 
                 // lighting pass ---------------------------------------------------------
                 {
-                    glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
+                    glEnable(GL_BLEND);
+                    glBlendEquation(GL_FUNC_ADD);
+                    glBlendFunc(GL_ONE, GL_ONE);
+
+                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                    //glBindFramebuffer(GL_FRAMEBUFFER, app->gBuffer);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    // ----------
+
                     GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT4 };
                     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
-                    glDepthMask(GL_FALSE);
-                    //glColorMask();
-
+                  
                    // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                   // glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                    //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
                     glActiveTexture(GL_TEXTURE0);
-                    
                     glBindTexture(GL_TEXTURE_2D, app->gPosition);
 
                     glActiveTexture(GL_TEXTURE1);
@@ -747,16 +761,28 @@ void Render(App* app)
 
                     // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
                     //// setting uniforms sampler locations
-                    //Program& prog = app->programs[app->lightingPassProgramIdx];
-                    //glUseProgram(prog.handle);
+                    Program& prog = app->programs[app->lightingPassProgramIdx];
+                    glUseProgram(prog.handle);
 
-                    //glUniform1i(0, 0);
-                    //glUniform1i(0, 1);
-                    //glUniform1i(0, 2);
-                    
-                    RenderScreenQuad(app->lightingPassProgramIdx, app);
+                    for (int i = 0; i < app->lights.size(); ++i)
+                    {
+                        Light& l = app->lights[i];
+                        GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
+                        glUniform1i(lightIdxLocation, i);
 
-                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                        if (l.type == LightType::LightType_Directional)
+                        {
+                            RenderScreenQuad(app->lightingPassProgramIdx, app);
+                        }
+                        else
+                        {
+                            // render sphere with scale fitting the light volume radius
+                        }
+                    }
+
+                    glUseProgram(0);
+
+                    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
                    
                 }
 
@@ -767,10 +793,15 @@ void Render(App* app)
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
+                    Program& texGeoProgram = app->programs[app->texturedGeometryProgramIdx];
+                    glUseProgram(texGeoProgram.handle);
+
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, app->selectedAttachment);
 
                     RenderScreenQuad(app->texturedGeometryProgramIdx, app);
+
+                    glUseProgram(0);
                 }
 
             }
@@ -786,7 +817,7 @@ void RenderScreenQuad(u32 programIdx, App* app)
     Mesh& mesh = app->meshes[app->texturedQuadMeshIdx];
 
     Program& p = app->programs[programIdx];
-    glUseProgram(p.handle);
+    //glUseProgram(p.handle);
 
     GLuint vao = FindVAO(mesh, 0, p);
     glBindVertexArray(vao);
@@ -800,7 +831,7 @@ void RenderScreenQuad(u32 programIdx, App* app)
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
-    glUseProgram(0);
+   // glUseProgram(0);
 }
 
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
