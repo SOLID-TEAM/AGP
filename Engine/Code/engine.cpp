@@ -726,9 +726,12 @@ void Render(App* app)
                     GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT4 };
                     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
-                    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
+                    glDepthMask(GL_FALSE);
+                    //glColorMask();
+
+                   // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                   // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                   // glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
                     glActiveTexture(GL_TEXTURE0);
                     
@@ -759,6 +762,7 @@ void Render(App* app)
 
                 // render screen quad with selected texture from combobox
                 {
+                    glDepthMask(GL_TRUE);
                     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
