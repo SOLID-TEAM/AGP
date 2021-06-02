@@ -209,7 +209,7 @@ void Init(App* app)
 
     app->cbuffer = CreateConstantBuffer(app->maxUniformBufferSize);
 
-    // framebuffer object and textures attachments ----------------
+    // Framebuffer object and textures attachments ----------------
 
     // position color buffer
     glGenTextures(1, &app->gPosition);
@@ -347,33 +347,6 @@ void Init(App* app)
 
     // ------------------------------------------------------------
 
-    // Geometry
-    //glGenBuffers(1, &app->embeddedVertices);
-    //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
-    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    //glGenBuffers(1, &app->embeddedElements);
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    //// Attribute state
-    //glGenVertexArrays(1, &app->vao);
-    //glBindVertexArray(app->vao);
-    //glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
-    //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0 );
-    //glEnableVertexAttribArray(0);
-    //glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12 );
-    //glEnableVertexAttribArray(1);
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
-    //glBindVertexArray(0);
-
-    //// program initialization
-    //app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
-    //Program& texturedGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
-    //app->programUniformTexture = glGetUniformLocation(texturedGeometryProgram.handle, "uTexture");
-
     //// Texture initialization
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png"); // TODO: fix texture location
@@ -392,24 +365,6 @@ void Init(App* app)
     Program& dirLightPassProgram = app->programs[app->dirLightPassProgramIdx];
     FillInputVertexShaderLayout(dirLightPassProgram);
 
-    /*app->pointLightPassProgramIdx = LoadProgram(app, "shaders.glsl", "POINT_LIGHT_PASS_VOLUMES");
-    Program& pointLightPassProgram = app->programs[app->pointLightPassProgramIdx];
-    FillInputVertexShaderLayout(pointLightPassProgram);*/
-
-   /* app->lightingPassProgramIdx = LoadProgram(app, "shaders.glsl", "LIGHTING_PASS");
-    Program& lightingProgram = app->programs[app->lightingPassProgramIdx];
-    FillInputVertexShaderLayout(lightingProgram);*/
-    //glUseProgram(lightingProgram.handle);
-    //app->gPosSampler =  glGetUniformLocation(lightingProgram.handle, "positionTex");
-    //app->gNormSampler = glGetUniformLocation(lightingProgram.handle, "normalTex");
-    //app->gAlbeSampler = glGetUniformLocation(lightingProgram.handle, "albedoTex");
-
-    // load program -------------------------------------------------
-
-   /* app->texturedMeshProgramIdx = LoadProgram(app, "shaders.glsl", "SIMPLE_PATRICK");
-    Program& texturedMeshProgram = app->programs[app->texturedMeshProgramIdx];
-    FillInputVertexShaderLayout(texturedMeshProgram);*/
-
     // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
@@ -423,22 +378,6 @@ void Init(App* app)
     Mesh& mesh = app->meshes.back();
     u32 meshIdx = (u32)app->meshes.size() - 1u;
     app->texturedQuadMeshIdx = meshIdx;
-
-   /* app->models.push_back(Model{});
-    Model& model = app->models.back();
-    model.meshIdx = meshIdx;
-    u32 modelIdx = (u32)app->models.size() - 1u;*/
-
-    // basic material
-    //u32 baseMeshMaterialIndex = (u32)app->materials.size();
-    //app->materials.push_back(Material{});
-    //Material& material = app->materials.back();
-    //material.name = "basic_white_mat";
-    //material.albedo = vec3(1.0f, 1.0f, 1.0f);
-    ////material.emissive = vec3(emissiveColor.r, emissiveColor.g, emissiveColor.b);
-    ////material.smoothness = 10 / 256.0f;
-    //material.albedoTextureIdx = app->diceTexIdx;
-    //model.materialIdx.push_back(baseMeshMaterialIndex);
 
     // create the vertex format
     VertexBufferLayout vertexBufferLayout = {};
