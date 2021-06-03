@@ -217,7 +217,8 @@ struct App
     u32 texturedMeshProgramIdx;
     u32 geometryPassProgramIdx;
     u32 dirLightPassProgramIdx;
-    u32 pointLightPassProgramIdx;
+    //u32 pointLightPassProgramIdx;
+    u32 zPrePassProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
