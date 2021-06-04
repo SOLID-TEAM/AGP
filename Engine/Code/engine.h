@@ -276,6 +276,9 @@ struct App
     GLuint finalPassBuffer;
     GLuint finalPassDepth;
 
+    GLuint zPrePassFbo;
+    GLuint zPrePassDepth;
+
     GLuint selectedAttachment; // imgui combobox
 
     //glm::mat4 worldMatrix;

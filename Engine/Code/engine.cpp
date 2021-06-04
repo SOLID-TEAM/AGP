@@ -335,6 +335,29 @@ void Init(App* app)
 
     app->selectedAttachment = app->gFinalPass;
 
+    // z pre pass fbo -------------
+    glGenTextures(1, &app->zPrePassDepth);
+    glBindTexture(GL_TEXTURE_2D, app->zPrePassDepth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenFramebuffers(1, &app->zPrePassFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->zPrePassFbo);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->zPrePassDepth, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        ELOG("error creating zprepass framebuffer object");
+    }
+   // -----------------------------------
+
     // camera -----------------------------------------------------
 
     app->camera.position = { -3.5f , .0f , -22.f};
@@ -745,6 +768,8 @@ void Render(App* app)
 
                 // Z Pre pass for both rendering pipelines forward/deferred
                 {
+                    glBindFramebuffer(GL_FRAMEBUFFER, app->zPrePassFbo);
+
                     glDepthMask(GL_TRUE);
                     //glColorMask(0, 0, 0, 0);
                     glDepthFunc(GL_LESS);
@@ -775,6 +800,8 @@ void Render(App* app)
                             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                         }
                     }
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     // ---------------------------
 
                     /*glDepthMask(GL_FALSE);
@@ -786,14 +813,21 @@ void Render(App* app)
 
                 // Geometry pass -------------------------------------------------------------------
 
+                glEnable(GL_DEPTH_TEST);
                 glDepthMask(GL_FALSE);
                 glColorMask(1, 1, 1, 1);
                 glDepthFunc(GL_EQUAL);
 
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
                 // bind default zbuffer for read (from z pre pass depth)
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, app->zPrePassFbo);
                 // bind gbuffer to write
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app->gBuffer);
+
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
                 // copy default zbuffer depth to gbuffer fbo depth
                 GLint w, h;
@@ -803,23 +837,6 @@ void Render(App* app)
 
                 GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
                 glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
-
-                /*glDepthMask(GL_FALSE);
-                glColorMask(1, 1, 1, 1);
-                glDepthFunc(GL_EQUAL);*/
-
-                //glEnable(GL_DEPTH_TEST);
-                glEnable(GL_BLEND);
-                //glDepthMask(GL_TRUE);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                //glClear(GL_COLOR_BUFFER_BIT);
-                
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-             
-                //glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
                 Program& texturedMeshProgram = app->programs[app->geometryPassProgramIdx/*app->texturedMeshProgramIdx*/];
                 glUseProgram(texturedMeshProgram.handle);
