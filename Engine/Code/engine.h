@@ -7,6 +7,7 @@
 #include "platform.h"
 #include <glad/glad.h>
 #include "buffer_management.h"
+#include <random>
 
 #define BINDING(b) b
 
@@ -289,6 +290,13 @@ struct App
     std::vector<Entity> entities;
 
     Camera camera;
+
+    // SSAO
+    u32 ssaoProgramIdx;
+    std::vector<vec3> ssaoKernel;
+    GLuint ssaoFBO;
+    GLuint ssaoColorBuffer;
+    GLuint noiseTexture;
 };
 
 

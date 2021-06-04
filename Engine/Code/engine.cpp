@@ -196,6 +196,68 @@ void Init(App* app)
     // Fill opengl info once at init
     FillOpenGLInfo(app);
 
+    // SSAO ------------------------------------------------------
+    // SSAO kernel
+    std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
+    std::default_random_engine generator;
+    
+    for (unsigned int i = 0; i < 64; ++i)
+    {
+        glm::vec3 sample(
+            randomFloats(generator) * 2.0f - 1.0f,
+            randomFloats(generator) * 2.0f - 1.0f,
+            randomFloats(generator)
+        );
+
+        sample = glm::normalize(sample);
+        sample *= randomFloats(generator);
+        float scale = (float)i / 64.0f;
+        scale = Lerp(0.1f, 1.0f, scale * scale);
+        sample *= scale;
+        app->ssaoKernel.push_back(sample);
+    }
+
+    // SSAO noise
+    std::vector<glm::vec3> ssaoNoise;
+    for (unsigned int i = 0; i < 16; ++i)
+    {
+        glm::vec3 noise(
+            randomFloats(generator) * 2.0f - 1.0f,
+            randomFloats(generator) * 2.0f - 1.0f,
+            0.0f);
+        ssaoNoise.push_back(noise);
+    }
+
+    glGenTextures(1, &app->noiseTexture);
+    glBindTexture(GL_TEXTURE_2D, app->noiseTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    // SSAO Framebuffer
+    glGenFramebuffers(1, &app->ssaoFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+
+    glGenTextures(1, &app->ssaoColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, app->displaySize.x, app->displaySize.y, 0, GL_RED, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->ssaoColorBuffer, 0);
+
+    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        ELOG("error creating ssao framebuffer");
+    }
+
+    // ------------------------------------------------------------
+    
+
     // GL_KHR_debug callback for show opengl errors
     if (GLVersion.major > 4 || (GLVersion.major == 4 && GLVersion.minor >= 2))
     {
@@ -381,6 +443,11 @@ void Init(App* app)
     app->zPrePassProgramIdx = LoadProgram(app, "shaders.glsl", "Z_PRE_PASS");
     Program& zPreProg = app->programs[app->zPrePassProgramIdx];
     FillInputVertexShaderLayout(zPreProg);
+
+    // load SSAO program --------------------------------------------
+    app->ssaoProgramIdx = LoadProgram(app, "shaders.glsl", "SSAO_PASS");
+    Program& ssaoProg = app->programs[app->ssaoProgramIdx];
+    FillInputVertexShaderLayout(ssaoProg);
 
     // load geometry first pass program -----------------------------
     app->geometryPassProgramIdx = LoadProgram(app, "shaders.glsl", "GEOMETRY_PASS");
@@ -639,7 +706,7 @@ void Gui(App* app)
     }
 
     ImGui::Begin("RenderTest");
-    ImGui::Image((ImTextureID)app->selectedAttachment, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
+    ImGui::Image((ImTextureID)app->ssaoColorBuffer, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
     ImGui::End();
 }
 
@@ -877,6 +944,37 @@ void Render(App* app)
                 glDepthMask(GL_FALSE);
                 glDisable(GL_DEPTH_TEST);
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+                // SSAO PASS -------------------------------------------------------------
+                {
+                    glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    // use ssao program
+                    Program& ssaoProg = app->programs[app->ssaoProgramIdx];
+                    glUseProgram(ssaoProg.handle);
+                    
+                    // bind sampler textures
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, app->gPosition);
+
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, app->gNormal);
+
+                    glActiveTexture(GL_TEXTURE2);
+                    glBindTexture(GL_TEXTURE_2D, app->noiseTexture);    
+
+                    // send kernel samples
+                    glUniform3fv(glGetUniformLocation(ssaoProg.handle, "samples"), 64, &app->ssaoKernel[0][0]);
+                    // send projection matrix
+                    glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projectionMat"), 1, GL_FALSE, &app->projection[0][0]);
+                    
+                    // render screen quad
+                    RenderScreenQuad(app->ssaoProgramIdx, app);
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                }
+                // -----------------------------------------------------------------------
 
                 // lighting pass ---------------------------------------------------------
                 {
