@@ -300,6 +300,8 @@ struct App
     GLuint ssaoColorBuffer;
     GLuint ssaoColorBufferBlur;
     GLuint noiseTexture;
+    bool doSSAO = true;
+    bool doSSAOBlur = true;
 };
 
 

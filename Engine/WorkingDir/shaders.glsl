@@ -117,18 +117,21 @@ void main()
 
 	float occlusion = 0.0;
 	float position_depth = (view * vec4(fragPos, 1.0)).z;
+
+//	vec4 sampleDir;
+
 	for(int i = 0; i < kernelSize; ++i)
 	{
 		// get sample pos
 		//vec3 samplePos = TBN * samples[i]; // from tangent space to view space
 		//samplePos = fragPos + samplePos * radius; // move the sample pos to our current frag origin
 
-		// discard rays near certaint surface angle
-		//float angle = dot()
+		// discard rays near certain surface angle
+//		vec3 sampleDirr =  normalize(TBN * samples[i]);
+//		if(dot(sampleDirr, normal) < 0.15)
+//			continue;
 
 		vec4 samplePos = view * vec4(fragPos + TBN * samples[i] * radius, 1.0);
-
-		
 
 		// project sample pos to get position
 		vec4 offset = vec4(samplePos.xyz, 1.0);
@@ -297,6 +300,7 @@ layout(binding = 0, std140) uniform GlobalParams
 };
 
 uniform int lightIdx;
+uniform bool doAO;
 
 layout(binding = 0) uniform sampler2D gPosition;
 layout(binding = 1) uniform sampler2D gNormal;
@@ -313,7 +317,7 @@ void main()
 	vec3 diffuse, ambient, specular;
 
 	float ambientFactor = 0.3;
-	float AO = texture(ssao, vTexCoord).r;
+	float AO = doAO ? texture(ssao, vTexCoord).r : 1.0;
 	float diffuseFactor = 0.8;
 	float shininess = 20.0;
 	float specFactor = 0.7;

@@ -699,9 +699,10 @@ void Gui(App* app)
 {
     ImGui::Begin("Info");
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
-    const char* items[] = { "position", "normals", "albedo", "depth", "depth_grayscale", "final pass", "etc"};
-    u32 attachments[] = { app->gPosition, app->gNormal, app->gAlbedoSpec, app->depthAttachmentHandle ,app->gDepthGray, app->gFinalPass};
-    static const char* item_current = items[5];            // Here our selection is a single pointer stored outside the object.
+    const char* items[] = { "position", "normals", "albedo", "depth", "depth_grayscale", "SSAO", "SSAO Blur","final pass", "etc"};
+    u32 attachments[] = { app->gPosition, app->gNormal, app->gAlbedoSpec, app->depthAttachmentHandle ,app->gDepthGray, 
+                          app->ssaoColorBuffer, app->ssaoColorBufferBlur, app->gFinalPass};
+    static const char* item_current = items[7];            // Here our selection is a single pointer stored outside the object.
     if (ImGui::BeginCombo("Texture", item_current)) // The second parameter is the label previewed before opening the combo.
     {
         for (int n = 0; n < IM_ARRAYSIZE(attachments); n++)
@@ -718,6 +719,28 @@ void Gui(App* app)
         }
         ImGui::EndCombo();
     }
+
+    if (ImGui::Checkbox("SSAO", &app->doSSAO))
+    {
+        // clear textures for visualization purposes (combobox etc)
+        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        if (app->doSSAOBlur)
+            app->doSSAOBlur = false;
+    }
+    if (ImGui::Checkbox("SSAO blur", &app->doSSAOBlur))
+    {
+        // clear textures for visualization purposes (combobox etc)
+        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
     ImGui::End();
 
     if (app->showGlInfo)
@@ -968,57 +991,63 @@ void Render(App* app)
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
                 // SSAO PASS -------------------------------------------------------------
+                if (app->doSSAO)
                 {
-                   /*glEnable(GL_DEPTH_TEST);
-                    glDepthMask(GL_FALSE);
-                    glColorMask(1, 1, 1, 1);
-                    glDepthFunc(GL_LESS);*/
+                    {
+                        /*glEnable(GL_DEPTH_TEST);
+                         glDepthMask(GL_FALSE);
+                         glColorMask(1, 1, 1, 1);
+                         glDepthFunc(GL_LESS);*/
 
-                    glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
-                    glClear(GL_COLOR_BUFFER_BIT);
+                        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+                        glClear(GL_COLOR_BUFFER_BIT);
 
-                    // use ssao program
-                    Program& ssaoProg = app->programs[app->ssaoProgramIdx];
-                    glUseProgram(ssaoProg.handle);
-                    
-                    // bind sampler textures
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, app->gPosition);
+                        // use ssao program
+                        Program& ssaoProg = app->programs[app->ssaoProgramIdx];
+                        glUseProgram(ssaoProg.handle);
 
-                    glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, app->gNormal);
+                        // bind sampler textures
+                        glActiveTexture(GL_TEXTURE0);
+                        glBindTexture(GL_TEXTURE_2D, app->gPosition);
 
-                    glActiveTexture(GL_TEXTURE2);
-                    glBindTexture(GL_TEXTURE_2D, app->noiseTexture);    
+                        glActiveTexture(GL_TEXTURE1);
+                        glBindTexture(GL_TEXTURE_2D, app->gNormal);
 
-                    // send kernel samples
-                    glUniform3fv(glGetUniformLocation(ssaoProg.handle, "samples"), 64, &app->ssaoKernel[0][0]);
-                    // send projection and view matrix
-                    glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projection"), 1, GL_FALSE, &app->projection[0][0]);
-                    glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "view"), 1, GL_FALSE, &app->view[0][0]);
-                    
-                    // render screen quad
-                    RenderScreenQuad(app->ssaoProgramIdx, app);
+                        glActiveTexture(GL_TEXTURE2);
+                        glBindTexture(GL_TEXTURE_2D, app->noiseTexture);
 
-                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                    glUseProgram(0);
-                }
-                
-                // SSAO Blur pass ------
-                {
-                    glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
-                    glClear(GL_COLOR_BUFFER_BIT);
+                        // send kernel samples
+                        glUniform3fv(glGetUniformLocation(ssaoProg.handle, "samples"), 64, &app->ssaoKernel[0][0]);
+                        // send projection and view matrix
+                        glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projection"), 1, GL_FALSE, &app->projection[0][0]);
+                        glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "view"), 1, GL_FALSE, &app->view[0][0]);
 
-                    Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
-                    glUseProgram(ssaoBlurProg.handle);
+                        // render screen quad
+                        RenderScreenQuad(app->ssaoProgramIdx, app);
 
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                        glUseProgram(0);
+                    }
 
-                    RenderScreenQuad(app->ssaoBlurProgramIdx, app);
+                    // SSAO Blur pass ------
+                    if (app->doSSAOBlur)
+                    {
+                        {
+                            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+                            glClear(GL_COLOR_BUFFER_BIT);
 
-                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                    glUseProgram(0);
+                            Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
+                            glUseProgram(ssaoBlurProg.handle);
+
+                            glActiveTexture(GL_TEXTURE0);
+                            glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+
+                            RenderScreenQuad(app->ssaoBlurProgramIdx, app);
+
+                            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                            glUseProgram(0);
+                        }
+                    }
                 }
 
                 // -----------------------------------------------------------------------
@@ -1048,7 +1077,7 @@ void Render(App* app)
                     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
 
                     glActiveTexture(GL_TEXTURE3);
-                    glBindTexture(GL_TEXTURE_2D, app->ssaoColorBufferBlur);
+                    glBindTexture(GL_TEXTURE_2D, app->doSSAOBlur ? app->ssaoColorBufferBlur : app->ssaoColorBuffer);
 
                     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
@@ -1066,6 +1095,8 @@ void Render(App* app)
                     {
 
                         Light& l = app->lights[i];
+
+                        glUniform1i(glGetUniformLocation(prog.handle, "doAO"), app->doSSAO);
                        
 
                         if (l.type == LightType::LightType_Directional)
