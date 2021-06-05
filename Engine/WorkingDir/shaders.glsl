@@ -122,7 +122,13 @@ void main()
 		// get sample pos
 		//vec3 samplePos = TBN * samples[i]; // from tangent space to view space
 		//samplePos = fragPos + samplePos * radius; // move the sample pos to our current frag origin
+
+		// discard rays near certaint surface angle
+		//float angle = dot()
+
 		vec4 samplePos = view * vec4(fragPos + TBN * samples[i] * radius, 1.0);
+
+		
 
 		// project sample pos to get position
 		vec4 offset = vec4(samplePos.xyz, 1.0);
@@ -142,7 +148,7 @@ void main()
 	}
 
 	occlusion = 1.0 - (occlusion / kernelSize);
-	FragColor = vec4(pow(occlusion, 1.0));
+	FragColor = vec4(pow(occlusion, 2.0));
 }
 
 #endif
@@ -306,7 +312,7 @@ void main()
 	vec3 vViewDir = normalize(uCameraPosition - vPosition);
 	vec3 diffuse, ambient, specular;
 
-	float ambientFactor = 0.2;
+	float ambientFactor = 0.3;
 	float AO = texture(ssao, vTexCoord).r;
 	float diffuseFactor = 0.8;
 	float shininess = 20.0;
@@ -362,7 +368,7 @@ void main()
 					albedo * vec4(diffuse, 1.0) + // diffuse
 					albedo * vec4(specular, 1.0); // specular
 
-	lightingPassTex = vec4(diffuse, 1.0); //objColor;//vec4(diffuse, 1.0);
+	lightingPassTex = objColor;//vec4(diffuse, 1.0);
 }
 
 
