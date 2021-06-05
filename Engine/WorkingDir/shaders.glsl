@@ -90,14 +90,24 @@ float bias = 0.025;
 // tile noise tex on screen, screen dimensions divided by noise size
 const vec2 noiseScale = vec2(800.0 / 4.0, 600.0 / 4.0);
 
+// TODO: for readapt with forward/deferred reconstructing position from depth instead using this
+//vec3 reconstructPixelPos(float depth, mat4 projectionMatrixInv, vec2 v)
+//{
+//	float xndc = gl_FragCoord.x/v.x * 2.0 - 1.0;
+//	float yndc = gl_FragCoord.y/v.y * 2.0 - 1.0;
+//	float zndc = depth * 2.0 - 1.0;
+//	vec4 posNDC = vec4(xndc, yndc, zndc, 1.0);
+//	vec4 posView = projectionMatrixInv * posNDC;
+//	return posView.xyz / posView.w;
+//}
+
 void main()
 {
 	vec2 texCoords = gl_FragCoord.xy / vec2(800.0, 600.0);
 	// TODO: rework this part to make ssao shader compatible with both renderer forward/deferred ---
-	vec3 fragPos   = vec3(view * vec4(texture(gPosition, texCoords).xyz, 1.0));//texture(gPosition, texCoords).xyz;
+	vec3 fragPos   = texture(gPosition, texCoords).xyz;//vec3(view * vec4(texture(gPosition, texCoords).xyz, 1.0));//
 	vec3 normal    = texture(gNormal, texCoords).rgb;
-	if(normal == vec3(0.0f)) discard;
-	normal = normalize(view * vec4(normal, 1.0)).xyz;
+	if(normal == vec3(0)) discard;
 	// ---------------------------------------------------------------------------------------------
 	vec3 randomVec = texture(texNoise, texCoords * noiseScale).xyz;
 
@@ -106,14 +116,16 @@ void main()
 	mat3 TBN = mat3(tangent, bitangent, normal);
 
 	float occlusion = 0.0;
+	float position_depth = (view * vec4(fragPos, 1.0)).z;
 	for(int i = 0; i < kernelSize; ++i)
 	{
 		// get sample pos
-		vec3 samplePos = TBN * samples[i]; // from tangent space to view space
-		samplePos = fragPos + samplePos * radius; // move the sample pos to our current frag origin
+		//vec3 samplePos = TBN * samples[i]; // from tangent space to view space
+		//samplePos = fragPos + samplePos * radius; // move the sample pos to our current frag origin
+		vec4 samplePos = view * vec4(fragPos + TBN * samples[i] * radius, 1.0);
 
 		// project sample pos to get position
-		vec4 offset = vec4(samplePos, 1.0);
+		vec4 offset = vec4(samplePos.xyz, 1.0);
 		offset = projection * offset; // from world space to clip space
 		offset.xyz /= offset.w; // perspective divide
 		offset.xyz = offset.xyz * 0.5 + 0.5; // transform to 0.0 - 1.0 range
@@ -121,9 +133,10 @@ void main()
 		// TODO: rework this part to make ssao shader compatible with both renderer forward/deferred
 		// get sample depth from position texture
 		float sampleDepth = vec3(view * texture(gPosition, offset.xy)).z;//texture(gPosition, offset.xy).z; // get depth
+
 		// ------------------------------------------------------------------------------------------
 		// range check and accumulate
-		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
+		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(position_depth - sampleDepth));
 		occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
 
 	}
@@ -179,7 +192,7 @@ uniform sampler2D uTexture;
 void main()
 {
 	gPosition = vec4(vPosition,1.0);
-	gNormal = vec4(vNormal, 1.0);
+	gNormal = vec4(normalize(vNormal), 1.0);
 	gAlbedoSpec = texture(uTexture, vTexCoord);
 	gDepthGray = vec4(gl_FragCoord.zzz, 1.0);
 }
