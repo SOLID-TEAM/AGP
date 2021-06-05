@@ -151,7 +151,7 @@ void main()
 	}
 
 	occlusion = 1.0 - (occlusion / kernelSize);
-	FragColor = vec4(pow(occlusion, 2.0));
+	FragColor = vec4(pow(occlusion, 1.0));
 }
 
 #endif

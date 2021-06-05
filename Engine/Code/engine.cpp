@@ -730,8 +730,13 @@ void Gui(App* app)
         glClear(GL_COLOR_BUFFER_BIT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // if we disable ssao
+        // disable ssao blur too
         if (app->doSSAOBlur)
             app->doSSAOBlur = false;
+        // if we enable ssao, enable blur by default
+        if(app->doSSAO)
+            app->doSSAOBlur = true;
     }
     if (ImGui::Checkbox("SSAO blur", &app->doSSAOBlur))
     {
@@ -750,9 +755,9 @@ void Gui(App* app)
         ImGui::End();
     }
 
-    ImGui::Begin("RenderTest");
+    /*ImGui::Begin("RenderTest");
     ImGui::Image((ImTextureID)app->ssaoColorBufferBlur, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
-    ImGui::End();
+    ImGui::End();*/
 }
 
 void Update(App* app)
