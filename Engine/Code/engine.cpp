@@ -461,6 +461,11 @@ void Init(App* app)
     Program& zPreProg = app->programs[app->zPrePassProgramIdx];
     FillInputVertexShaderLayout(zPreProg);
 
+    // load forward render program ----------------------------------
+    app->fordwardProgramIdx = LoadProgram(app, "shaders.glsl", "FORWARD");
+    Program& forwardProg = app->programs[app->fordwardProgramIdx];
+    FillInputVertexShaderLayout(forwardProg);
+
     // load SSAO program --------------------------------------------
     app->ssaoProgramIdx = LoadProgram(app, "shaders.glsl", "SSAO_PASS");
     Program& ssaoProg = app->programs[app->ssaoProgramIdx];
@@ -699,19 +704,56 @@ void Gui(App* app)
 {
     ImGui::Begin("Info");
     ImGui::Text("FPS: %f", 1.0f/app->deltaTime);
-    const char* items[] = { "position", "normals", "albedo", "depth", "depth_grayscale", "SSAO", "SSAO Blur","final pass", "etc"};
-    u32 attachments[] = { app->gPosition, app->gNormal, app->gAlbedoSpec, app->depthAttachmentHandle ,app->gDepthGray, 
-                          app->ssaoColorBuffer, app->ssaoColorBufferBlur, app->gFinalPass};
-    static const char* item_current = items[7];            // Here our selection is a single pointer stored outside the object.
+
+    const char* forwardItems[] = { "final pass", "ssao pass if we have time" };
+    const char* deferredItems[] = { "position", "normals", "albedo", "depth", "depth_grayscale", "SSAO", "SSAO Blur","final pass", "etc" };
+    u32 attachments[] = { app->gPosition, app->gNormal, app->gAlbedoSpec, app->depthAttachmentHandle ,app->gDepthGray,
+                          app->ssaoColorBuffer, app->ssaoColorBufferBlur, app->gFinalPass };
+    u32 forwardAttachments[] = { app->gFinalPass };
+
+    const char** items = app->deferred ? deferredItems : forwardItems;
+    static const char* item_current = app->deferred ? deferredItems[7] : forwardItems[0];
+
+    const char* pipelines[] = { "Deferred", "Forward" };
+    static const char* current_pipe = pipelines[0];
+    if (ImGui::BeginCombo("Renderer", current_pipe)) // The second parameter is the label previewed before opening the combo.
+    {
+        for (int n = 0; n < 2; n++)
+        {
+            bool is_selected = (current_pipe == pipelines[n]);
+            if (ImGui::Selectable(pipelines[n], is_selected))
+            {
+                current_pipe = pipelines[n];
+
+                app->deferred = n == 0 ? true : false;
+
+                if (!app->deferred)
+                {
+                    item_current = forwardItems[0];
+                    app->selectedAttachment = forwardAttachments[0];
+                }
+            }
+        }
+        ImGui::EndCombo();
+    }
+
     if (ImGui::BeginCombo("Texture", item_current)) // The second parameter is the label previewed before opening the combo.
     {
-        for (int n = 0; n < IM_ARRAYSIZE(attachments); n++)
+        int n_items = 0;
+        if (app->deferred) {
+            n_items = IM_ARRAYSIZE(attachments);
+        }
+        else {
+            n_items = IM_ARRAYSIZE(forwardAttachments);
+        }
+
+        for (int n = 0; n < n_items; n++)
         {
             bool is_selected = (item_current == items[n]);
             if (ImGui::Selectable(items[n], is_selected))
             { 
                 item_current = items[n];
-                app->selectedAttachment = attachments[n];
+                app->selectedAttachment = app->deferred ? attachments[n] : forwardAttachments[n];
             }
                 
             /*if (is_selected)
@@ -720,30 +762,35 @@ void Gui(App* app)
         ImGui::EndCombo();
     }
 
-    if (ImGui::Checkbox("SSAO", &app->doSSAO))
-    {
-        // clear textures for visualization purposes (combobox etc)
-        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    ImGui::Separator();
 
-        // if we disable ssao
-        // disable ssao blur too
-        if (app->doSSAOBlur)
-            app->doSSAOBlur = false;
-        // if we enable ssao, enable blur by default
-        if(app->doSSAO)
-            app->doSSAOBlur = true;
-    }
-    if (ImGui::Checkbox("SSAO blur", &app->doSSAOBlur))
+    if (app->deferred) // TODO: implement ssao with forward rendering using the z pre pass depth
     {
-        // clear textures for visualization purposes (combobox etc)
-        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (ImGui::Checkbox("SSAO", &app->doSSAO))
+        {
+            // clear textures for visualization purposes (combobox etc)
+            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // if we disable ssao
+            // disable ssao blur too
+            if (app->doSSAOBlur)
+                app->doSSAOBlur = false;
+            // if we enable ssao, enable blur by default
+            if (app->doSSAO)
+                app->doSSAOBlur = true;
+        }
+        if (ImGui::Checkbox("SSAO blur", &app->doSSAOBlur))
+        {
+            // clear textures for visualization purposes (combobox etc)
+            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
     }
 
     ImGui::End();
@@ -848,41 +895,7 @@ void Render(App* app)
     {
         case Mode_TexturedQuad:
             {
-                {
-                    // TODO: Draw your textured quad here!
-                    // - clear the framebuffer
-                    // - set the viewport
-                    // - set the blending state
-                    // - bind the texture into unit 0
-                    // - bind the program 
-                    //   (...and make its texture sample from unit 0)
-                    // - bind the vao
-                    // - glDrawElements() !!!
-
-
-                    /*glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-                    glViewport(0, 0, app->displaySize.x, app->displaySize.y);
-
-                    Program& programTexturedGeometry = app->programs[app->texturedGeometryProgramIdx];
-                    glUseProgram(programTexturedGeometry.handle);
-                    glBindVertexArray(app->vao);
-
-                    glEnable(GL_BLEND);
-                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-                    glUniform1i(app->programUniformTexture, 0);
-                    glActiveTexture(GL_TEXTURE0);
-                    GLuint textureHandle = app->textures[app->diceTexIdx].handle;
-                    glBindTexture(GL_TEXTURE_2D , textureHandle);
-
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-
-                    glBindVertexArray(0);
-                    glUseProgram(0);*/
-                }
-
+                
                 // Z Pre pass for both rendering pipelines forward/deferred
                 {
                     glBindFramebuffer(GL_FRAMEBUFFER, app->zPrePassFbo);
@@ -928,90 +941,154 @@ void Render(App* app)
                     //glBindVertexArray(0);
                 }
 
-                // Geometry pass -------------------------------------------------------------------
-
-                glEnable(GL_DEPTH_TEST);
-                glDepthMask(GL_FALSE);
-                glColorMask(1, 1, 1, 1);
-                glDepthFunc(GL_EQUAL);
-
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-                // bind default zbuffer for read (from z pre pass depth)
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, app->zPrePassFbo);
-                // bind gbuffer to write
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app->gBuffer);
-
-                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-                // copy default zbuffer depth to gbuffer fbo depth
-                GLint w, h;
-                w = app->displaySize.x;
-                h = app->displaySize.y;
-                glBlitFramebuffer(0,0, w,h, 0,0,w,h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-
-                GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-                glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
-
-                Program& texturedMeshProgram = app->programs[app->geometryPassProgramIdx/*app->texturedMeshProgramIdx*/];
-                glUseProgram(texturedMeshProgram.handle);
-
-                glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
-
-                for (int idx = 0; idx < app->entities.size(); ++idx)
+                if (app->deferred)
                 {
-                    Entity& entity = app->entities[idx];
-                    Model& model = app->models[entity.modelIndex];
-                    Mesh& mesh = app->meshes[model.meshIdx];
 
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
-
-                    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                    // Geometry pass -------------------------------------------------------------------
                     {
-                        Submesh& submesh = mesh.submeshes[i];
-                        
-                        GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
-                        glBindVertexArray(vao);
+                        glEnable(GL_DEPTH_TEST);
+                        glDepthMask(GL_FALSE);
+                        glColorMask(1, 1, 1, 1);
+                        glDepthFunc(GL_EQUAL);
 
-                        u32 submeshMaterilIdx = model.materialIdx[i];
-                        Material& submeshMaterial = app->materials[submeshMaterilIdx];
+                        glEnable(GL_BLEND);
+                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                        glActiveTexture(GL_TEXTURE0);
-                        glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-                        //glUniform1i(app->texturedMeshProgram_uTexture, 0);
+                        // bind default zbuffer for read (from z pre pass depth)
+                        glBindFramebuffer(GL_READ_FRAMEBUFFER, app->zPrePassFbo);
+                        // bind gbuffer to write
+                        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app->gBuffer);
 
-                        //Submesh& submesh = mesh.submeshes[i];
-                        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                        // copy default zbuffer depth to gbuffer fbo depth
+                        GLint w, h;
+                        w = app->displaySize.x;
+                        h = app->displaySize.y;
+                        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+                        GLuint drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+                        glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
+
+                        Program& texturedMeshProgram = app->programs[app->geometryPassProgramIdx/*app->texturedMeshProgramIdx*/];
+                        glUseProgram(texturedMeshProgram.handle);
+
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
+                        for (int idx = 0; idx < app->entities.size(); ++idx)
+                        {
+                            Entity& entity = app->entities[idx];
+                            Model& model = app->models[entity.modelIndex];
+                            Mesh& mesh = app->meshes[model.meshIdx];
+
+                            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
+
+                            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                            {
+                                Submesh& submesh = mesh.submeshes[i];
+
+                                GLuint vao = FindVAO(mesh, i, texturedMeshProgram);
+                                glBindVertexArray(vao);
+
+                                u32 submeshMaterilIdx = model.materialIdx[i];
+                                Material& submeshMaterial = app->materials[submeshMaterilIdx];
+
+                                glActiveTexture(GL_TEXTURE0);
+                                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                                //glUniform1i(app->texturedMeshProgram_uTexture, 0);
+
+                                //Submesh& submesh = mesh.submeshes[i];
+                                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                            }
+                        }
+
+                        glBindVertexArray(0);
+                        glUseProgram(0);
+
+                        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                        /*glDepthMask(GL_FALSE);
+                        glDisable(GL_DEPTH_TEST);*/
+                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     }
-                }
 
-                glBindVertexArray(0);
-                glUseProgram(0);
-
-                //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                /*glDepthMask(GL_FALSE);
-                glDisable(GL_DEPTH_TEST);*/
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-                // SSAO PASS -------------------------------------------------------------
-                if (app->doSSAO)
-                {
+                    // SSAO PASS -------------------------------------------------------------
+                    if (app->doSSAO)
                     {
-                        /*glEnable(GL_DEPTH_TEST);
-                         glDepthMask(GL_FALSE);
-                         glColorMask(1, 1, 1, 1);
-                         glDepthFunc(GL_LESS);*/
+                        {
+                            /*glEnable(GL_DEPTH_TEST);
+                             glDepthMask(GL_FALSE);
+                             glColorMask(1, 1, 1, 1);
+                             glDepthFunc(GL_LESS);*/
 
-                        glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+                            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
+                            glClear(GL_COLOR_BUFFER_BIT);
+
+                            // use ssao program
+                            Program& ssaoProg = app->programs[app->ssaoProgramIdx];
+                            glUseProgram(ssaoProg.handle);
+
+                            // bind sampler textures
+                            glActiveTexture(GL_TEXTURE0);
+                            glBindTexture(GL_TEXTURE_2D, app->gPosition);
+
+                            glActiveTexture(GL_TEXTURE1);
+                            glBindTexture(GL_TEXTURE_2D, app->gNormal);
+
+                            glActiveTexture(GL_TEXTURE2);
+                            glBindTexture(GL_TEXTURE_2D, app->noiseTexture);
+
+                            // send kernel samples
+                            glUniform3fv(glGetUniformLocation(ssaoProg.handle, "samples"), 64, &app->ssaoKernel[0][0]);
+                            // send projection and view matrix
+                            glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projection"), 1, GL_FALSE, &app->projection[0][0]);
+                            glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "view"), 1, GL_FALSE, &app->view[0][0]);
+
+                            // render screen quad
+                            RenderScreenQuad(app->ssaoProgramIdx, app);
+
+                            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                            glUseProgram(0);
+                        }
+
+                        // SSAO Blur pass ------
+                        if (app->doSSAOBlur)
+                        {
+                            {
+                                glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+                                glClear(GL_COLOR_BUFFER_BIT);
+
+                                Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
+                                glUseProgram(ssaoBlurProg.handle);
+
+                                glActiveTexture(GL_TEXTURE0);
+                                glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+
+                                RenderScreenQuad(app->ssaoBlurProgramIdx, app);
+
+                                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                                glUseProgram(0);
+                            }
+                        }
+                    }
+
+                    // -----------------------------------------------------------------------
+
+                    // lighting pass ---------------------------------------------------------
+                    {
+                        glDepthMask(GL_FALSE);
+                        glDisable(GL_DEPTH_TEST);
+
+                        glBindFramebuffer(GL_FRAMEBUFFER, app->finalPassBuffer);
+
+                        glEnable(GL_BLEND);
+                        glBlendEquation(GL_FUNC_ADD);
+                        glBlendFunc(GL_ONE, GL_ONE);
+
                         glClear(GL_COLOR_BUFFER_BIT);
 
-                        // use ssao program
-                        Program& ssaoProg = app->programs[app->ssaoProgramIdx];
-                        glUseProgram(ssaoProg.handle);
+                        // ----------
 
-                        // bind sampler textures
                         glActiveTexture(GL_TEXTURE0);
                         glBindTexture(GL_TEXTURE_2D, app->gPosition);
 
@@ -1019,145 +1096,145 @@ void Render(App* app)
                         glBindTexture(GL_TEXTURE_2D, app->gNormal);
 
                         glActiveTexture(GL_TEXTURE2);
-                        glBindTexture(GL_TEXTURE_2D, app->noiseTexture);
+                        glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
 
-                        // send kernel samples
-                        glUniform3fv(glGetUniformLocation(ssaoProg.handle, "samples"), 64, &app->ssaoKernel[0][0]);
-                        // send projection and view matrix
-                        glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projection"), 1, GL_FALSE, &app->projection[0][0]);
-                        glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "view"), 1, GL_FALSE, &app->view[0][0]);
+                        glActiveTexture(GL_TEXTURE3);
+                        glBindTexture(GL_TEXTURE_2D, app->doSSAOBlur ? app->ssaoColorBufferBlur : app->ssaoColorBuffer);
 
-                        // render screen quad
-                        RenderScreenQuad(app->ssaoProgramIdx, app);
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
+                        // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
+                        //// setting uniforms sampler locations
+
+                        Program& prog = app->programs[app->dirLightPassProgramIdx];
+                        glUseProgram(prog.handle);
+
+                        GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
+                        GLuint worldViewProjectionLocation = glGetUniformLocation(prog.handle, "WVP");
+
+
+                        for (int i = 0; i < app->lights.size(); ++i)
+                        {
+
+                            Light& l = app->lights[i];
+
+                            glUniform1i(glGetUniformLocation(prog.handle, "doAO"), app->doSSAO);
+
+
+                            if (l.type == LightType::LightType_Directional)
+                            {
+                                mat4 MVP = mat4(1.0);
+                                glUniform1i(lightIdxLocation, i);
+                                glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
+
+                                RenderScreenQuad(app->dirLightPassProgramIdx, app);
+
+                            }
+                            else
+                            {
+                                // this values must match with shader calculations
+                                // for now, we have all light points attenuation values hardcoded on shader with this below values
+                                float constant = 1.0;
+                                float linear = 0.09;
+                                float quadratic = 0.032;
+                                float lightMax = std::fmaxf(std::fmaxf(l.color.r, l.color.g), l.color.b);
+                                float radius = (-linear + std::sqrtf(linear * linear - 4 * quadratic * (constant - (256.0 / 5.0) * lightMax)))
+                                    / (2 * quadratic);
+
+                                glEnable(GL_CULL_FACE); // render light effect only once
+                                glCullFace(GL_FRONT);   // render the light volume if the camera is inside the sphere volume too 
+                                mat4 pWorldMatrix = TransformPositionScale(-l.position, vec3(radius));
+                                mat4 MVP = app->projection * app->view * pWorldMatrix;
+                                glUniform1i(lightIdxLocation, i);
+                                glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
+
+                                // render sphere with scale fitting the light volume radius
+
+                                Model& model = app->models[app->defaultModelsId[(int)DefaultModelType::Sphere]];
+                                Mesh& mesh = app->meshes[model.meshIdx];
+
+                                //glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, s.localParamsOffset, s.localParamsSize);
+
+                                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                                {
+                                    GLuint vao = FindVAO(mesh, i, prog);
+                                    glBindVertexArray(vao);
+
+                                    Submesh& submesh = mesh.submeshes[i];
+                                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                                }
+
+                                glDisable(GL_CULL_FACE);
+
+                            }
+                        }
+
+
+                        glBindVertexArray(0);
+                        glUseProgram(0);
 
                         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                        glUseProgram(0);
-                    }
 
-                    // SSAO Blur pass ------
-                    if (app->doSSAOBlur)
-                    {
-                        {
-                            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
-                            glClear(GL_COLOR_BUFFER_BIT);
-
-                            Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
-                            glUseProgram(ssaoBlurProg.handle);
-
-                            glActiveTexture(GL_TEXTURE0);
-                            glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
-
-                            RenderScreenQuad(app->ssaoBlurProgramIdx, app);
-
-                            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                            glUseProgram(0);
-                        }
                     }
                 }
-
-                // -----------------------------------------------------------------------
-
-                // lighting pass ---------------------------------------------------------
+                else
                 {
-                    glDepthMask(GL_FALSE);
-                    glDisable(GL_DEPTH_TEST);
-
-                    glBindFramebuffer(GL_FRAMEBUFFER, app->finalPassBuffer);
-
-                    glEnable(GL_BLEND);
-                    glBlendEquation(GL_FUNC_ADD);
-                    glBlendFunc(GL_ONE, GL_ONE);
-
-                    glClear(GL_COLOR_BUFFER_BIT);
-
-                    // ----------
-                    
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, app->gPosition);
-
-                    glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, app->gNormal);
-
-                    glActiveTexture(GL_TEXTURE2);
-                    glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
-
-                    glActiveTexture(GL_TEXTURE3);
-                    glBindTexture(GL_TEXTURE_2D, app->doSSAOBlur ? app->ssaoColorBufferBlur : app->ssaoColorBuffer);
-
-                    glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
-
-                    // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
-                    //// setting uniforms sampler locations
-
-                    Program& prog = app->programs[app->dirLightPassProgramIdx];
-                    glUseProgram(prog.handle);
-
-                    GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
-                    GLuint worldViewProjectionLocation = glGetUniformLocation(prog.handle, "WVP");
-                   
-
-                    for (int i = 0; i < app->lights.size(); ++i)
+                    // FORWARD RENDERING with z pre pass
                     {
+                        glEnable(GL_DEPTH_TEST);
+                        glDepthMask(GL_FALSE);
+                        glColorMask(1, 1, 1, 1);
+                        glDepthFunc(GL_EQUAL);
 
-                        Light& l = app->lights[i];
+                        glEnable(GL_BLEND);
+                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                        glUniform1i(glGetUniformLocation(prog.handle, "doAO"), app->doSSAO);
-                       
+                        glBindFramebuffer(GL_READ_FRAMEBUFFER, app->zPrePassFbo);
+                        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app->finalPassBuffer);
 
-                        if (l.type == LightType::LightType_Directional)
+                        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                        // copy default zbuffer depth to gbuffer fbo depth
+                        GLint w, h;
+                        w = app->displaySize.x;
+                        h = app->displaySize.y;
+                        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+                        Program& prog = app->programs[app->fordwardProgramIdx];
+                        glUseProgram(prog.handle);
+
+                        glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
+
+                        for (int idx = 0; idx < app->entities.size(); ++idx)
                         {
-                            mat4 MVP = mat4(1.0);
-                            glUniform1i(lightIdxLocation, i);
-                            glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
-
-                            RenderScreenQuad(app->dirLightPassProgramIdx, app);
-
-                        }
-                        else
-                        {
-                            // this values must match with shader calculations
-                            // for now, we have all light points attenuation values hardcoded on shader with this below values
-                            float constant = 1.0;
-                            float linear = 0.09;
-                            float quadratic = 0.032;
-                            float lightMax = std::fmaxf(std::fmaxf(l.color.r, l.color.g), l.color.b);
-                            float radius = (-linear + std::sqrtf(linear * linear - 4 * quadratic * (constant - (256.0 / 5.0) * lightMax)))
-                                / (2 * quadratic);
-
-                            glEnable(GL_CULL_FACE); // render light effect only once
-                            glCullFace(GL_FRONT);   // render the light volume if the camera is inside the sphere volume too 
-                            mat4 pWorldMatrix = TransformPositionScale(-l.position, vec3(radius));
-                            mat4 MVP = app->projection * app->view * pWorldMatrix;
-                            glUniform1i(lightIdxLocation, i);
-                            glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &MVP[0][0]);
-
-                            // render sphere with scale fitting the light volume radius
-               
-                            Model& model = app->models[app->defaultModelsId[(int)DefaultModelType::Sphere]];
+                            Entity& entity = app->entities[idx];
+                            Model& model = app->models[entity.modelIndex];
                             Mesh& mesh = app->meshes[model.meshIdx];
 
-                            //glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, s.localParamsOffset, s.localParamsSize);
-                                                        
+                            glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(1), app->cbuffer.handle, entity.localParamsOffset, entity.localParamsSize);
+
                             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                             {
+                                Submesh& submesh = mesh.submeshes[i];
+
                                 GLuint vao = FindVAO(mesh, i, prog);
                                 glBindVertexArray(vao);
 
-                                Submesh& submesh = mesh.submeshes[i];
+                                u32 submeshMaterilIdx = model.materialIdx[i];
+                                Material& submeshMaterial = app->materials[submeshMaterilIdx];
+
+                                glActiveTexture(GL_TEXTURE0);
+                                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                           
+                                //Submesh& submesh = mesh.submeshes[i];
                                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                             }
-
-                            glDisable(GL_CULL_FACE);
-
                         }
+
+                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     }
 
-                    
-                    glBindVertexArray(0);
-                    glUseProgram(0);
-
-                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                   
                 }
 
                 // render screen quad with selected texture from combobox

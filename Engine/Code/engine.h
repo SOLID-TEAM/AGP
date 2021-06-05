@@ -220,6 +220,7 @@ struct App
     u32 dirLightPassProgramIdx;
     //u32 pointLightPassProgramIdx;
     u32 zPrePassProgramIdx;
+    u32 fordwardProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -302,6 +303,9 @@ struct App
     GLuint noiseTexture;
     bool doSSAO = true;
     bool doSSAOBlur = true;
+
+    // pipeline selection
+    bool deferred = true;
 };
 
 
