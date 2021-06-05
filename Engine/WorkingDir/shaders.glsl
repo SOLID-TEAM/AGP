@@ -142,11 +142,59 @@ void main()
 	}
 
 	occlusion = 1.0 - (occlusion / kernelSize);
-	FragColor = vec4(occlusion);
+	FragColor = vec4(pow(occlusion, 1.0));
 }
 
 #endif
 #endif
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+#ifdef SSAO_BLUR_PASS
+
+#if defined(VERTEX) ///////////////////////////////////////////////////
+
+layout(location=0) in vec3 aPosition;
+layout(location=1) in vec2 aTexCoord;
+
+out vec2 vTexCoord;
+
+void main()
+{
+	vTexCoord = aTexCoord;
+	gl_Position = vec4(aPosition, 1.0);
+}
+
+#elif defined(FRAGMENT) ///////////////////////////////////////////////
+
+
+layout(location = 0) out vec4 oColor;
+
+in vec2 vTexCoord;
+
+uniform sampler2D ssaoInput;
+
+
+void main()
+{
+	vec2 texelSize = 1.0 / vec2(textureSize(ssaoInput, 0));
+	float result = 0.0;
+	for(int x = -2; x < 2; ++x)
+	{
+		for(int y = -2; y < 2; ++y)
+		{
+			vec2 offset = vec2(float(x), float(y)) * texelSize;
+			result += texture(ssaoInput, vTexCoord + offset).r;
+		}
+	}
+
+	oColor = vec4(result / (4.0 * 4.0));
+}
+
+
+#endif
+#endif
+
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
@@ -247,6 +295,7 @@ uniform int lightIdx;
 layout(binding = 0) uniform sampler2D gPosition;
 layout(binding = 1) uniform sampler2D gNormal;
 layout(binding = 2) uniform sampler2D gAlbedoSpec;
+layout(binding = 3) uniform sampler2D ssao;
 
 void main()
 {
@@ -258,6 +307,7 @@ void main()
 	vec3 diffuse, ambient, specular;
 
 	float ambientFactor = 0.2;
+	float AO = texture(ssao, vTexCoord).r;
 	float diffuseFactor = 0.8;
 	float shininess = 20.0;
 	float specFactor = 0.7;
@@ -270,7 +320,7 @@ void main()
 		float lightContribution = max(dot(uNormal, lightDir), 0.0);
 
 		diffuse = lightContribution * diffuseFactor * lightColor;
-		ambient = lightContribution * ambientFactor * lightColor;
+		ambient = lightContribution * ambientFactor * AO * lightColor;
 
 		// specular
 		vec3 r = reflect(-lightDir, uNormal);
@@ -283,7 +333,7 @@ void main()
 		float lightContribution = max(dot(uNormal, lightDir), 0.0);
 
 		vec3 d = lightContribution * diffuseFactor * lightColor;
-		vec3 a = lightContribution * ambientFactor * lightColor;
+		vec3 a = lightContribution * ambientFactor * AO * lightColor;
 
 		// specular
 		vec3 r = reflect(-lightDir, uNormal);
@@ -312,7 +362,7 @@ void main()
 					albedo * vec4(diffuse, 1.0) + // diffuse
 					albedo * vec4(specular, 1.0); // specular
 
-	lightingPassTex = objColor;//vec4(diffuse, 1.0);
+	lightingPassTex = vec4(diffuse, 1.0); //objColor;//vec4(diffuse, 1.0);
 }
 
 

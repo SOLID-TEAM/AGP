@@ -293,9 +293,12 @@ struct App
 
     // SSAO
     u32 ssaoProgramIdx;
+    u32 ssaoBlurProgramIdx;
     std::vector<vec3> ssaoKernel;
     GLuint ssaoFBO;
+    GLuint ssaoBlurFBO;
     GLuint ssaoColorBuffer;
+    GLuint ssaoColorBufferBlur;
     GLuint noiseTexture;
 };
 

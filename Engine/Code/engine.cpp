@@ -255,6 +255,23 @@ void Init(App* app)
         ELOG("error creating ssao framebuffer");
     }
 
+    // SSAO Blur Framebuffer
+    glGenFramebuffers(1, &app->ssaoBlurFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+    glGenTextures(1, &app->ssaoColorBufferBlur);
+    glBindTexture(GL_TEXTURE_2D, app->ssaoColorBufferBlur);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, app->displaySize.x, app->displaySize.y, 0, GL_RED, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, app->ssaoColorBufferBlur,0);
+
+    fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        ELOG("error creating ssao blur framebuffer");
+    }
+
     // ------------------------------------------------------------
     
 
@@ -448,6 +465,11 @@ void Init(App* app)
     app->ssaoProgramIdx = LoadProgram(app, "shaders.glsl", "SSAO_PASS");
     Program& ssaoProg = app->programs[app->ssaoProgramIdx];
     FillInputVertexShaderLayout(ssaoProg);
+
+    // load SSAO blur program ---------------------------------------
+    app->ssaoBlurProgramIdx = LoadProgram(app, "shaders.glsl", "SSAO_BLUR_PASS");
+    Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
+    FillInputVertexShaderLayout(ssaoBlurProg);
 
     // load geometry first pass program -----------------------------
     app->geometryPassProgramIdx = LoadProgram(app, "shaders.glsl", "GEOMETRY_PASS");
@@ -706,7 +728,7 @@ void Gui(App* app)
     }
 
     ImGui::Begin("RenderTest");
-    ImGui::Image((ImTextureID)app->ssaoColorBuffer, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
+    ImGui::Image((ImTextureID)app->ssaoColorBufferBlur, { (float)app->displaySize.x, (float)app->displaySize.y }, { 0,1 }, { 1,0 });
     ImGui::End();
 }
 
@@ -981,6 +1003,24 @@ void Render(App* app)
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     glUseProgram(0);
                 }
+                
+                // SSAO Blur pass ------
+                {
+                    glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
+                    glUseProgram(ssaoBlurProg.handle);
+
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+
+                    RenderScreenQuad(app->ssaoBlurProgramIdx, app);
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                    glUseProgram(0);
+                }
+
                 // -----------------------------------------------------------------------
 
                 // lighting pass ---------------------------------------------------------
@@ -1006,6 +1046,9 @@ void Render(App* app)
 
                     glActiveTexture(GL_TEXTURE2);
                     glBindTexture(GL_TEXTURE_2D, app->gAlbedoSpec);
+
+                    glActiveTexture(GL_TEXTURE3);
+                    glBindTexture(GL_TEXTURE_2D, app->ssaoColorBufferBlur);
 
                     glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
