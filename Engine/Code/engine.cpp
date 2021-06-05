@@ -941,12 +941,17 @@ void Render(App* app)
                 glUseProgram(0);
 
                 //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                glDepthMask(GL_FALSE);
-                glDisable(GL_DEPTH_TEST);
+                /*glDepthMask(GL_FALSE);
+                glDisable(GL_DEPTH_TEST);*/
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
                 // SSAO PASS -------------------------------------------------------------
                 {
+                   /*glEnable(GL_DEPTH_TEST);
+                    glDepthMask(GL_FALSE);
+                    glColorMask(1, 1, 1, 1);
+                    glDepthFunc(GL_LESS);*/
+
                     glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoFBO);
                     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -966,18 +971,23 @@ void Render(App* app)
 
                     // send kernel samples
                     glUniform3fv(glGetUniformLocation(ssaoProg.handle, "samples"), 64, &app->ssaoKernel[0][0]);
-                    // send projection matrix
-                    glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projectionMat"), 1, GL_FALSE, &app->projection[0][0]);
+                    // send projection and view matrix
+                    glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "projection"), 1, GL_FALSE, &app->projection[0][0]);
+                    glUniformMatrix4fv(glGetUniformLocation(ssaoProg.handle, "view"), 1, GL_FALSE, &app->view[0][0]);
                     
                     // render screen quad
                     RenderScreenQuad(app->ssaoProgramIdx, app);
 
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                    glUseProgram(0);
                 }
                 // -----------------------------------------------------------------------
 
                 // lighting pass ---------------------------------------------------------
                 {
+                    glDepthMask(GL_FALSE);
+                    glDisable(GL_DEPTH_TEST);
+
                     glBindFramebuffer(GL_FRAMEBUFFER, app->finalPassBuffer);
 
                     glEnable(GL_BLEND);

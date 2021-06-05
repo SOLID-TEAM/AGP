@@ -59,7 +59,18 @@ void main()
 ///////////////////////////////////////////////////////////////////////
 #ifdef SSAO_PASS
 
-#if defined(FRAGMENT)
+#if defined(VERTEX)
+
+layout(location = 0) in vec3 aPosition;
+
+void main()
+{
+	gl_Position = vec4(aPosition, 1.0);
+}
+
+///////////////////////////////////////////////////////////////////////
+
+#elif defined(FRAGMENT)
 layout(location = 0) out vec4 FragColor;
 
 //in vec2 TexCoords;
@@ -69,7 +80,8 @@ layout(binding = 1) uniform sampler2D gNormal;
 layout(binding = 2) uniform sampler2D texNoise;
 
 uniform vec3 samples[64];
-uniform mat4 projectionMat;
+uniform mat4 projection;
+uniform mat4 view;
 
 int kernelSize = 64;
 float radius = 0.5;
@@ -82,8 +94,10 @@ void main()
 {
 	vec2 texCoords = gl_FragCoord.xy / vec2(800.0, 600.0);
 	// TODO: rework this part to make ssao shader compatible with both renderer forward/deferred ---
-	vec3 fragPos   = texture(gPosition, texCoords).xyz;
+	vec3 fragPos   = vec3(view * vec4(texture(gPosition, texCoords).xyz, 1.0));//texture(gPosition, texCoords).xyz;
 	vec3 normal    = texture(gNormal, texCoords).rgb;
+	if(normal == vec3(0.0f)) discard;
+	normal = normalize(view * vec4(normal, 1.0)).xyz;
 	// ---------------------------------------------------------------------------------------------
 	vec3 randomVec = texture(texNoise, texCoords * noiseScale).xyz;
 
@@ -100,13 +114,13 @@ void main()
 
 		// project sample pos to get position
 		vec4 offset = vec4(samplePos, 1.0);
-		offset = projectionMat * offset; // from view space to clip space
+		offset = projection * offset; // from world space to clip space
 		offset.xyz /= offset.w; // perspective divide
 		offset.xyz = offset.xyz * 0.5 + 0.5; // transform to 0.0 - 1.0 range
 
 		// TODO: rework this part to make ssao shader compatible with both renderer forward/deferred
 		// get sample depth from position texture
-		float sampleDepth = texture(gPosition, offset.xy).z; // get depth
+		float sampleDepth = vec3(view * texture(gPosition, offset.xy)).z;//texture(gPosition, offset.xy).z; // get depth
 		// ------------------------------------------------------------------------------------------
 		// range check and accumulate
 		float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
@@ -115,7 +129,7 @@ void main()
 	}
 
 	occlusion = 1.0 - (occlusion / kernelSize);
-	FragColor = vec4(255.0);
+	FragColor = vec4(occlusion);
 }
 
 #endif
@@ -165,7 +179,7 @@ uniform sampler2D uTexture;
 void main()
 {
 	gPosition = vec4(vPosition,1.0);
-	gNormal = vec4(normalize(vNormal), 1.0);
+	gNormal = vec4(vNormal, 1.0);
 	gAlbedoSpec = texture(uTexture, vTexCoord);
 	gDepthGray = vec4(gl_FragCoord.zzz, 1.0);
 }
@@ -226,6 +240,7 @@ void main()
 	vec2 vTexCoord = gl_FragCoord.xy / vec2(800, 600);
     vec3 vPosition = texture(gPosition, vTexCoord).rgb;
 	vec3 uNormal = texture(gNormal, vTexCoord).rgb;
+	uNormal = normalize(uNormal);
 	vec3 vViewDir = normalize(uCameraPosition - vPosition);
 	vec3 diffuse, ambient, specular;
 
