@@ -450,11 +450,23 @@ void Init(App* app)
     // ------------------------------------------------------------
 
     //// Texture initialization
+    
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png"); // TODO: fix texture location
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+    std::vector<std::string> facePaths
+    {
+            "Cubemap/right.png",
+            "Cubemap/left.png",
+            "Cubemap/top.png",
+            "Cubemap/bottom.png",
+            "Cubemap/front.png",
+            "Cubemap/back.png"
+    };
+
+    app->cubeMapId = LoadCubemap(facePaths);
 
     // load z pre pass program --------------------------------------
     app->zPrePassProgramIdx = LoadProgram(app, "shaders.glsl", "Z_PRE_PASS");
@@ -487,13 +499,17 @@ void Init(App* app)
     Program& dirLightPassProgram = app->programs[app->dirLightPassProgramIdx];
     FillInputVertexShaderLayout(dirLightPassProgram);
 
-    // ---------------------------------------------------------------
 
     // textured quad to new structs ----------------------------------
     // textured geometry program
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
     Program& texturedGeoProgram = app->programs[app->texturedGeometryProgramIdx];
     FillInputVertexShaderLayout(texturedGeoProgram);
+
+    // skybox program --------------------------------------------
+    app->skyboxProgramIdx = LoadProgram(app, "shaders.glsl", "SKYBOX");
+    Program& skyboxProgram = app->programs[app->skyboxProgramIdx];
+    FillInputVertexShaderLayout(skyboxProgram);
 
     // meshes etc
     app->meshes.push_back(Mesh{});
@@ -698,6 +714,31 @@ void Init(App* app)
        light.position = { -6.0, -6.0, -10.0 };
        app->lights.push_back(light);
    }
+}
+
+uint LoadCubemap(std::vector<std::string> facesPaths)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    unsigned char* data;
+    for (unsigned int i = 0; i < 6; i++)
+    {
+        data = stbi_load(facesPaths[i].c_str(), &width, &height, &nrChannels, 0);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glBindFramebuffer(GL_TEXTURE_CUBE_MAP, 0);
+
+    return textureID;
 }
 
 void Gui(App* app)
@@ -1054,21 +1095,20 @@ void Render(App* app)
                         // SSAO Blur pass ------
                         if (app->doSSAOBlur)
                         {
-                            {
-                                glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
-                                glClear(GL_COLOR_BUFFER_BIT);
+                            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+                            glClear(GL_COLOR_BUFFER_BIT);
 
-                                Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
-                                glUseProgram(ssaoBlurProg.handle);
+                            Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
+                            glUseProgram(ssaoBlurProg.handle);
 
-                                glActiveTexture(GL_TEXTURE0);
-                                glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+                            glActiveTexture(GL_TEXTURE0);
+                            glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
 
-                                RenderScreenQuad(app->ssaoBlurProgramIdx, app);
+                            RenderScreenQuad(app->ssaoBlurProgramIdx, app);
 
-                                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                                glUseProgram(0);
-                            }
+                            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                            glUseProgram(0);
+                           
                         }
                     }
 
@@ -1176,6 +1216,50 @@ void Render(App* app)
                         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
                     }
+                
+                    // Skybox ----------------------------------------------------------------
+                    if (app->viewSkybox)
+                    {
+
+                        glBindFramebuffer(GL_FRAMEBUFFER, app->finalPassBuffer);
+
+                        Program& skyboxProgram = app->programs[app->skyboxProgramIdx];
+                        glUseProgram(skyboxProgram.handle);
+
+                        glEnable(GL_DEPTH_TEST);
+                        glDepthFunc(GL_LEQUAL);
+                        glDepthMask(GL_FALSE);
+                        glDisable(GL_BLEND);
+
+
+                        GLuint viewLocation = glGetUniformLocation(skyboxProgram.handle, "uView");
+                        GLuint worldViewProjectionLocation = glGetUniformLocation(skyboxProgram.handle, "uProjection");
+                        GLuint skyboxLocation = glGetUniformLocation(skyboxProgram.handle, "uSkybox");
+
+                        glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &app->projection[0][0]);
+                        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &app->view[0][0]);
+
+                        Model& model = app->models[app->defaultModelsId[(int)DefaultModelType::Cube]];
+                        Mesh& mesh = app->meshes[model.meshIdx];
+                        GLuint vao = FindVAO(mesh, 0, skyboxProgram);
+                        glBindVertexArray(vao);
+
+                        glActiveTexture(GL_TEXTURE0);
+                        glBindTexture(GL_TEXTURE_CUBE_MAP, app->cubeMapId);
+
+                        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                        glBindVertexArray(0);
+
+                        glDepthMask(GL_TRUE);
+                        glDepthFunc(GL_LESS);
+
+                        glUseProgram(0);
+
+                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+                    }
+
                 }
                 else
                 {
