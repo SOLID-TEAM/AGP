@@ -81,6 +81,9 @@ Screen space ambient occlusion. Developed in 2007 by Crytek and used for first t
     - Deferred pipeline only:
         - Checkbox to toggle SSAO pass/passes
         - Checkbox to toggle SSAO blurr pass
+	- Checkbox to toggle Skybox rendering
+	- Checkbox to toggle fake reflections
+
 ## Changelog:
 ### v0.1 - may 18 2021
 First version with deferred shading with lighting volumes
@@ -96,9 +99,10 @@ Second/final deliverable additions.
 - Added z pre pass optimization for both renderers
 - z pre pass is used only for a first fast pass without materials, only depth for improve further passes speed (discarding heavy calculations on fragments that gonna be discarded), and opens the door for further post processing effects in forward pipeline.
 - Added Screen Space Ambient Occlusion (SSAO) for deferred pipeline. (forward pipeline is ready to implement it, using depth from z pre pass, but not implemented)
-- Environment mapping
+- Environment mapping: Added skybox rendered after entities as optimization and specular fake reflections
 - New Shader programs:
    - SSAO pass: computes the screen ambient occlusion on a screen quad
    - SSAO blur pass: blurs the resulting texture from the previous ssao pass
    - Forward: re-added the old forward rendering program to be able to add a combo box and rendering pipeline option
+   - Skybox: render the skybox cubemap in the background of the scene using the z pre pass depth buffer
  
