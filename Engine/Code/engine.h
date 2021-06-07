@@ -291,6 +291,9 @@ struct App
     std::vector<Entity> entities;
 
     Camera camera;
+    uint cubeMapId;
+    u32 skyboxProgramIdx;
+    u32 skyboxMeshIdx;
 
     // SSAO
     u32 ssaoProgramIdx;
@@ -301,6 +304,7 @@ struct App
     GLuint ssaoColorBuffer;
     GLuint ssaoColorBufferBlur;
     GLuint noiseTexture;
+    bool viewSkybox = true;
     bool doSSAO = true;
     bool doSSAOBlur = true;
 
@@ -320,6 +324,7 @@ void RenderScreenQuad(u32 programIdx, App* app);
 
 //
 u32 LoadTexture2D(App* app, const char* filepath);
+uint LoadCubemap(std::vector<std::string> facesPaths);
 //
 void UpdateCamera(App* app);
 void UpdateProjectionView(App* app);
@@ -333,3 +338,4 @@ void FillInputVertexShaderLayout(Program& program);
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program);
 
 void OnGlError(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* userParam);
+

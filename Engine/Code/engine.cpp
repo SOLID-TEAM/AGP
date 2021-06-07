@@ -450,11 +450,23 @@ void Init(App* app)
     // ------------------------------------------------------------
 
     //// Texture initialization
+    
     //app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png"); // TODO: fix texture location
     //app->blackTexIdx = LoadTexture2D(app, "color_black.png");
     //app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
     //app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+    std::vector<std::string> facePaths
+    {
+            "Cubemap/right.png",
+            "Cubemap/left.png",
+            "Cubemap/top.png",
+            "Cubemap/bottom.png",
+            "Cubemap/front.png",
+            "Cubemap/back.png"
+    };
+
+    app->cubeMapId = LoadCubemap(facePaths);
 
     // load z pre pass program --------------------------------------
     app->zPrePassProgramIdx = LoadProgram(app, "shaders.glsl", "Z_PRE_PASS");
@@ -487,66 +499,69 @@ void Init(App* app)
     Program& dirLightPassProgram = app->programs[app->dirLightPassProgramIdx];
     FillInputVertexShaderLayout(dirLightPassProgram);
 
-    // ---------------------------------------------------------------
 
-    // textured quad to new structs ----------------------------------
     // textured geometry program
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
     Program& texturedGeoProgram = app->programs[app->texturedGeometryProgramIdx];
     FillInputVertexShaderLayout(texturedGeoProgram);
 
-    // meshes etc
-    app->meshes.push_back(Mesh{});
-    Mesh& mesh = app->meshes.back();
-    u32 meshIdx = (u32)app->meshes.size() - 1u;
-    app->texturedQuadMeshIdx = meshIdx;
+    // skybox program --------------------------------------------
+    app->skyboxProgramIdx = LoadProgram(app, "shaders.glsl", "SKYBOX");
+    Program& skyboxProgram = app->programs[app->skyboxProgramIdx];
+    FillInputVertexShaderLayout(skyboxProgram);
 
-    // create the vertex format
-    VertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, 3 * sizeof(float) });
-    vertexBufferLayout.stride = 5 * sizeof(float);
+    // Quad mesh  ----------------------------------
 
-    // add submesh into mesh
-    std::vector<float> v;
-    std::vector<u32> ind;
-
-    u32 n_vert = ARRAY_COUNT(vertices);
-    for (u32 i = 0; i < n_vert; ++i)
     {
-        v.push_back(vertices[i].pos.x);
-        v.push_back(vertices[i].pos.y);
-        v.push_back(vertices[i].pos.z);
+        app->meshes.push_back(Mesh{});
+        Mesh& mesh = app->meshes.back();
+        u32 meshIdx = (u32)app->meshes.size() - 1u;
+        app->texturedQuadMeshIdx = meshIdx;
 
-        v.push_back(vertices[i].uv.x);
-        v.push_back(vertices[i].uv.y);
+        // create the vertex format
+        VertexBufferLayout vertexBufferLayout = {};
+        vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
+        vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, 3 * sizeof(float) });
+        vertexBufferLayout.stride = 5 * sizeof(float);
+
+        // add submesh into mesh
+        std::vector<float> v;
+        std::vector<u32> ind;
+
+        u32 n_vert = ARRAY_COUNT(vertices);
+        for (u32 i = 0; i < n_vert; ++i)
+        {
+            v.push_back(vertices[i].pos.x);
+            v.push_back(vertices[i].pos.y);
+            v.push_back(vertices[i].pos.z);
+
+            v.push_back(vertices[i].uv.x);
+            v.push_back(vertices[i].uv.y);
+        }
+
+        u32 n_indices = ARRAY_COUNT(indices);
+        for (u32 i = 0; i < n_indices; ++i)
+        {
+            ind.push_back(indices[i]);
+        }
+
+        Submesh submesh = {};
+        submesh.vertexBufferLayout = vertexBufferLayout;
+        submesh.vertices.swap(v);
+        submesh.indices.swap(ind);
+        mesh.submeshes.push_back(submesh);
+
+        // Geometry
+        glGenBuffers(1, &mesh.vertexBufferHandle);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glGenBuffers(1, &mesh.indexBufferHandle);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
-
-    u32 n_indices = ARRAY_COUNT(indices);
-    for (u32 i = 0; i < n_indices; ++i)
-    {
-        ind.push_back(indices[i]);
-    }
-
-    Submesh submesh = {};
-    submesh.vertexBufferLayout = vertexBufferLayout;
-    submesh.vertices.swap(v);
-    submesh.indices.swap(ind);
-    mesh.submeshes.push_back(submesh);
-
-    // prelink vao to this submesh || TODO: this is the way?
-    //FindVAO(mesh, 0, texturedGeoProgram);
-
-   // Geometry
-   glGenBuffers(1, &mesh.vertexBufferHandle);
-   glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-   glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-   glGenBuffers(1, &mesh.indexBufferHandle);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
-   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
    // ------------------------------------------------------------------------
 
@@ -577,10 +592,10 @@ void Init(App* app)
 
        defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Plane];
 
-       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,-3.8f,0.f }, { 0,0,0 }, vec3(30.0));
+       defaultElement.worldMatrix = TransformWorldMatrix({ 0.f,-3.8f,0.f }, { 0,0,0 }, vec3(3.0));
        app->entities.push_back(defaultElement);
 
-       defaultElement.worldMatrix = TransformWorldMatrix({- 10.f,-3.8f,3.f }, { 0, 0,-90 }, vec3(1, 2, 1));
+       defaultElement.worldMatrix = TransformWorldMatrix({- 10.f,-3.8f,3.f }, { 0, 0,-90 }, vec3(1, 1, 1));
        app->entities.push_back(defaultElement);
 
        defaultElement.modelIndex = app->defaultModelsId[(int)DefaultModelType::Cone];
@@ -698,6 +713,31 @@ void Init(App* app)
        light.position = { -6.0, -6.0, -10.0 };
        app->lights.push_back(light);
    }
+}
+
+uint LoadCubemap(std::vector<std::string> facesPaths)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    unsigned char* data;
+    for (unsigned int i = 0; i < 6; i++)
+    {
+        data = stbi_load(facesPaths[i].c_str(), &width, &height, &nrChannels, 0);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glBindFramebuffer(GL_TEXTURE_CUBE_MAP, 0);
+
+    return textureID;
 }
 
 void Gui(App* app)
@@ -1054,21 +1094,20 @@ void Render(App* app)
                         // SSAO Blur pass ------
                         if (app->doSSAOBlur)
                         {
-                            {
-                                glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
-                                glClear(GL_COLOR_BUFFER_BIT);
+                            glBindFramebuffer(GL_FRAMEBUFFER, app->ssaoBlurFBO);
+                            glClear(GL_COLOR_BUFFER_BIT);
 
-                                Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
-                                glUseProgram(ssaoBlurProg.handle);
+                            Program& ssaoBlurProg = app->programs[app->ssaoBlurProgramIdx];
+                            glUseProgram(ssaoBlurProg.handle);
 
-                                glActiveTexture(GL_TEXTURE0);
-                                glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
+                            glActiveTexture(GL_TEXTURE0);
+                            glBindTexture(GL_TEXTURE_2D, app->ssaoColorBuffer);
 
-                                RenderScreenQuad(app->ssaoBlurProgramIdx, app);
+                            RenderScreenQuad(app->ssaoBlurProgramIdx, app);
 
-                                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                                glUseProgram(0);
-                            }
+                            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                            glUseProgram(0);
+                           
                         }
                     }
 
@@ -1176,6 +1215,9 @@ void Render(App* app)
                         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
                     }
+                
+                
+
                 }
                 else
                 {
@@ -1235,6 +1277,59 @@ void Render(App* app)
                         glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     }
 
+                }
+
+                // Skybox ----------------------------------------------------------------
+                if (app->viewSkybox)
+                {
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, app->zPrePassFbo);
+                    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app->finalPassBuffer);
+
+                    // copy default zbuffer depth to gbuffer fbo depth
+                    GLint w, h;
+                    w = app->displaySize.x;
+                    h = app->displaySize.y;
+                    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+                    Program& skyboxProgram = app->programs[app->skyboxProgramIdx];
+                    glUseProgram(skyboxProgram.handle);
+
+                    glEnable(GL_DEPTH_TEST);
+                    glDepthFunc(GL_LEQUAL);
+                    glDepthMask(GL_FALSE);
+                    glDisable(GL_BLEND);
+
+                    GLuint viewLocation = glGetUniformLocation(skyboxProgram.handle, "uView");
+                    GLuint worldViewProjectionLocation = glGetUniformLocation(skyboxProgram.handle, "uProjection");
+                    GLuint skyboxLocation = glGetUniformLocation(skyboxProgram.handle, "uSkybox");
+
+                    glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &app->projection[0][0]);
+                    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &app->view[0][0]);
+
+                    glm::mat4 noTransView = mat4(mat3(app->view)); // No translation
+                    noTransView = rotate(noTransView, glm::radians(180.f), vec3(1, 0, 0));
+                    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &noTransView[0][0]);
+                    
+     
+                    Model& model = app->models[app->defaultModelsId[(int)DefaultModelType::Cube]];
+                    Mesh& mesh = app->meshes[model.meshIdx];
+                    Submesh& smesh = mesh.submeshes[0];
+                    GLuint vao = FindVAO(mesh, 0, skyboxProgram);
+                    glBindVertexArray(vao);
+
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, app->cubeMapId);
+
+                    //glDrawArrays(GL_TRIANGLES, 0, 36);
+                    glDrawElements(GL_TRIANGLES, smesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)smesh.indexOffset);
+
+                    glBindVertexArray(0);
+                    glDepthMask(GL_TRUE);
+                    glDepthFunc(GL_LESS);
+
+                    glUseProgram(0);
+
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 }
 
                 // render screen quad with selected texture from combobox
