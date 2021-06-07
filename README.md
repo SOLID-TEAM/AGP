@@ -21,6 +21,7 @@ Shader programs:
 - SSAO pass: computes the screen ambient occlusion on a screen quad
 - SSAO blur pass: blurs the resulting texture from the previous ssao pass
 - Forward: re-added the old forward rendering program to be able to add a combo box and rendering pipeline option
+- Skybox: render the skybox cubemap in the background of the scene using the z pre pass depth buffer
 
 ## Overview of some implemented techniques
 
