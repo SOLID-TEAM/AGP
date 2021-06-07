@@ -454,8 +454,8 @@ in vec3 vNormal;
 in vec3 vViewDir;
 
 uniform bool doFakeReflections;
-uniform samplerCube uSkybox;
-uniform sampler2D uTexture;
+layout(binding = 0) uniform samplerCube uSkybox;
+layout(binding = 1) uniform sampler2D uTexture;
 
 
 layout(location = 0) out vec4 oColor;
