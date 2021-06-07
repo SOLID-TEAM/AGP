@@ -293,6 +293,7 @@ struct App
     Camera camera;
     uint cubeMapId;
     u32 skyboxProgramIdx;
+    u32 skyboxMeshIdx;
 
     // SSAO
     u32 ssaoProgramIdx;
