@@ -544,7 +544,7 @@ void main()
 	vec4 baseColor = texture(uTexture, vTexCoord);
 	vec4 objColor = baseColor * vec4(ambient, 1.0) + // ambient
 					baseColor * vec4(diffuse, 1.0) + // diffuse
-					baseColor * vec4(specular, 1.0); // specular
+					baseColor * vec4(specularColor, 1.0); // specular
 
 	oColor = objColor;//vec4(diffuse, 1.0);
 }
