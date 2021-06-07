@@ -1259,6 +1259,10 @@ void Render(App* app)
                         Program& prog = app->programs[app->fordwardProgramIdx];
                         glUseProgram(prog.handle);
 
+                        glUniform1i(glGetUniformLocation(prog.handle, "doFakeReflections"), app->doFakeReflections); //..........
+                        glActiveTexture(GL_TEXTURE0);
+                        glBindTexture(GL_TEXTURE_CUBE_MAP, app->cubeMapId);
+
                         glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
                         for (int idx = 0; idx < app->entities.size(); ++idx)
@@ -1279,9 +1283,9 @@ void Render(App* app)
                                 u32 submeshMaterilIdx = model.materialIdx[i];
                                 Material& submeshMaterial = app->materials[submeshMaterilIdx];
 
-                                glActiveTexture(GL_TEXTURE0);
+                                glActiveTexture(GL_TEXTURE1);
                                 glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-                           
+   
                                 //Submesh& submesh = mesh.submeshes[i];
                                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                             }

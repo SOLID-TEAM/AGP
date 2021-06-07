@@ -453,7 +453,10 @@ in vec3 vPosition;
 in vec3 vNormal;
 in vec3 vViewDir;
 
+uniform bool doFakeReflections;
+uniform samplerCube uSkybox;
 uniform sampler2D uTexture;
+
 
 layout(location = 0) out vec4 oColor;
 
@@ -523,6 +526,21 @@ void main()
 		}
 	}
 	
+
+	vec3 specularColor = vec3(0.0);
+
+	if (doFakeReflections)
+	{
+		vec3 r = normalize(reflect(vViewDir, uNormal)); 
+		vec3 reflectedColor = texture(uSkybox, r).rgb * 0.1;
+		specularColor = specular * 0.8 + reflectedColor* 0.2 ;
+	}
+	else
+	{
+		specularColor = specular;
+	}
+
+
 	vec4 baseColor = texture(uTexture, vTexCoord);
 	vec4 objColor = baseColor * vec4(ambient, 1.0) + // ambient
 					baseColor * vec4(diffuse, 1.0) + // diffuse
