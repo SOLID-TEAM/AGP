@@ -833,6 +833,8 @@ void Gui(App* app)
         }
     }
 
+    ImGui::Checkbox("Skybox", &app->viewSkybox);
+
     ImGui::End();
 
     if (app->showGlInfo)
