@@ -46,6 +46,17 @@ its performs the per fragment calls if the current geometry depth is equal to th
 ### SSAO
 Screen space ambient occlusion. Developed in 2007 by Crytek and used for first time on the game Crysis. With ssao we can improve the visual fidelity of our scenes, by simulating self shadows occlusion with good results for realtime applications.
 
+<table>
+  <tr>
+    <td> SSAO on/off </td>
+    <td> SSAO/SSAO blur</td>
+  </tr>
+  <tr>
+     <td> <img src="Docs/ssaoFinalToggle.gif" /> </td>
+     <td> <img src="Docs/ssaoTexToggleBlur.gif" /> </td>
+  </tr>
+ </table>
+
 ## Controls
 ### Camera
 - keyboard keys W,A,S,D: navigation
