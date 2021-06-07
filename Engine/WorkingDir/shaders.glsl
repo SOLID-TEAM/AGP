@@ -301,11 +301,14 @@ layout(binding = 0, std140) uniform GlobalParams
 
 uniform int lightIdx;
 uniform bool doAO;
+uniform bool doFakeReflections;
+uniform mat4 modView;
 
 layout(binding = 0) uniform sampler2D gPosition;
 layout(binding = 1) uniform sampler2D gNormal;
 layout(binding = 2) uniform sampler2D gAlbedoSpec;
 layout(binding = 3) uniform sampler2D ssao;
+layout(binding = 4) uniform samplerCube uSkybox;
 
 void main()
 {
@@ -356,6 +359,8 @@ void main()
 		float dist = length(uLight[lightIdx].position - vPosition);
 		float attenuation = 1.0 / (constant + linear * dist +
 								       quadratic * (dist * dist));
+		
+		
 		vec3 s = specComponent * specFactor * lightColor;
 
 		a *= attenuation;
@@ -367,12 +372,26 @@ void main()
 		specular = s;
 	}
 	
-	vec4 albedo = texture(gAlbedoSpec, vTexCoord);
-	vec4 objColor = albedo * vec4(ambient, 1.0) + // ambient
-					albedo * vec4(diffuse, 1.0) + // diffuse
-					albedo * vec4(specular, 1.0); // specular
+	vec3 specularColor = vec3(0.0);
 
-	lightingPassTex = objColor;//vec4(diffuse, 1.0);
+	if (doFakeReflections)
+	{
+		vec3 r = normalize(reflect(vViewDir, uNormal)); 
+		vec3 reflectedColor = texture(uSkybox, r).rgb * 0.1;
+		specularColor = specular * 0.8 + reflectedColor* 0.2 ;
+	}
+	else
+	{
+		specularColor = specular;
+	}
+
+
+	vec4 albedo = texture(gAlbedoSpec, vTexCoord);
+	vec4 objColor = albedo * (	vec4(ambient, 1.0) + // ambient
+								vec4(diffuse, 1.0) + // diffuse
+								vec4(specularColor, 1.0)); // specular
+
+	lightingPassTex = objColor;
 }
 
 
@@ -533,7 +552,7 @@ out vec3 vTexCoord;
 
 void main()
 {
-	vTexCoord = aPosition;
+	vTexCoord = vec3(-aPosition.x ,aPosition.y, aPosition.z);
 	vec4 pos = uProjection * uView * vec4(aPosition, 1.0);
 	gl_Position = pos.xyww;
 }

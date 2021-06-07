@@ -835,6 +835,8 @@ void Gui(App* app)
 
     ImGui::Checkbox("Skybox", &app->viewSkybox);
 
+    ImGui::Checkbox("Fake Reflections", &app->doFakeReflections);
+
     ImGui::End();
 
     if (app->showGlInfo)
@@ -1142,6 +1144,9 @@ void Render(App* app)
                         glActiveTexture(GL_TEXTURE3);
                         glBindTexture(GL_TEXTURE_2D, app->doSSAOBlur ? app->ssaoColorBufferBlur : app->ssaoColorBuffer);
 
+                        glActiveTexture(GL_TEXTURE4);
+                        glBindTexture(GL_TEXTURE_CUBE_MAP, app->cubeMapId);
+
                         glBindBufferRange(GL_UNIFORM_BUFFER, BINDING(0), app->cbuffer.handle, app->globalParamsOffset, app->globalParamsSize);
 
                         // NOTE: 4.2 > glsl -> layout(binding = x) uniform sampler2D texName
@@ -1153,14 +1158,20 @@ void Render(App* app)
                         GLuint lightIdxLocation = glGetUniformLocation(prog.handle, "lightIdx");
                         GLuint worldViewProjectionLocation = glGetUniformLocation(prog.handle, "WVP");
 
+                        GLuint viewLocation = glGetUniformLocation(prog.handle, "modView");
+                        glm::mat4 noTransView = mat4(mat3(app->view)); // No translation
+                        noTransView = rotate(noTransView, glm::radians(180.f), vec3(1, 0, 0));
+                        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &noTransView[0][0]);
+
+                        glUniform1i(glGetUniformLocation(prog.handle, "doAO"), app->doSSAO);
+                        glUniform1i(glGetUniformLocation(prog.handle, "doFakeReflections"), app->doFakeReflections);
 
                         for (int i = 0; i < app->lights.size(); ++i)
                         {
 
                             Light& l = app->lights[i];
 
-                            glUniform1i(glGetUniformLocation(prog.handle, "doAO"), app->doSSAO);
-
+                   
 
                             if (l.type == LightType::LightType_Directional)
                             {
@@ -1306,7 +1317,6 @@ void Render(App* app)
                     GLuint skyboxLocation = glGetUniformLocation(skyboxProgram.handle, "uSkybox");
 
                     glUniformMatrix4fv(worldViewProjectionLocation, 1, GL_FALSE, &app->projection[0][0]);
-                    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &app->view[0][0]);
 
                     glm::mat4 noTransView = mat4(mat3(app->view)); // No translation
                     noTransView = rotate(noTransView, glm::radians(180.f), vec3(1, 0, 0));

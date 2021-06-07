@@ -294,6 +294,7 @@ struct App
     uint cubeMapId;
     u32 skyboxProgramIdx;
     u32 skyboxMeshIdx;
+    bool doFakeReflections = false;
 
     // SSAO
     u32 ssaoProgramIdx;
